@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from functools import lru_cache
 from typing import Annotated
 from urllib.parse import urlparse, urlunparse
 
@@ -33,11 +34,19 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    database_url: str
+    database_url: str = ""
     cors_origins: Annotated[list[str], NoDecode] = []
     log_level: str = "info"
     api_host: str = "0.0.0.0"
     api_port: int = 8000
+
+    @field_validator("database_url")
+    @classmethod
+    def require_database_url(cls, value: str) -> str:
+        """Reject startup when DATABASE_URL is missing from the environment."""
+        if not value.strip():
+            raise ValueError("DATABASE_URL environment variable is required")
+        return value
 
     @field_validator("cors_origins", mode="before")
     @classmethod
@@ -55,3 +64,9 @@ class Settings(BaseSettings):
     def database_url_redacted(self) -> str:
         """Database URL with credentials masked, suitable for log output."""
         return redact_database_url(self.database_url)
+
+
+@lru_cache
+def get_settings() -> Settings:
+    """Return cached settings loaded from the environment."""
+    return Settings()

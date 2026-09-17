@@ -6,11 +6,10 @@ import logging
 from contextlib import asynccontextmanager
 from typing import Any
 
+from app.config import Settings, get_settings
+from app.db.connection import check_connection, close_db, init_db
 from fastapi import FastAPI, Response, status
 from fastapi.middleware.cors import CORSMiddleware
-
-from app.config import Settings
-from app.db.connection import check_connection, close_db, init_db
 
 # Step 2 routes will be mounted under /api/v1/
 
@@ -30,7 +29,7 @@ async def lifespan(app: FastAPI):
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     """Build and configure the FastAPI application."""
-    resolved_settings = settings or Settings()
+    resolved_settings = settings or get_settings()
 
     app = FastAPI(title="Aion Memory Service", lifespan=lifespan)
     app.state.settings = resolved_settings
