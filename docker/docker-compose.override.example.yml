@@ -1,0 +1,10 @@
+# Optional local development overrides.
+# Copy to docker-compose.override.yml (auto-loaded by Compose) to enable hot-reload.
+#
+#   cp docker-compose.override.example.yml docker-compose.override.yml
+
+services:
+  api:
+    volumes:
+      - ../api:/app
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
