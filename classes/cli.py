@@ -3,4 +3,3 @@ class Cli:
 
     def run(self) -> None:
         """Run the command-line interface."""
-        pass
