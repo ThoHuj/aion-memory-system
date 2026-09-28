@@ -1,3 +1,6 @@
+from classes.cli import Cli
+
+
 def main() -> None:
     pass
 
