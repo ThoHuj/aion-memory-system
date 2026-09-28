@@ -2,7 +2,8 @@ from classes.cli import Cli
 
 
 def main() -> None:
-    pass
+    cli = Cli()
+    cli.run()
 
 
 if __name__ == "__main__":
