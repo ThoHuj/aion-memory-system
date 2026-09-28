@@ -27,7 +27,10 @@ def main() -> None:
     api_key, model = load_openrouter_config()
     open_router_client = OpenRouterClient(api_key=api_key, model=model)
     memory_store = MemoryStore()
-    memory_system = MemorySystem(memory_store=memory_store)
+    memory_system = MemorySystem(
+        memory_store=memory_store,
+        open_router_client=open_router_client,
+    )
     mock_agent = MockAgent(
         open_router_client=open_router_client,
         memory_system=memory_system,
