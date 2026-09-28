@@ -9,8 +9,13 @@ class MemorySystem:
 
     def add(self, messages: list[dict[str, str]]) -> None:
         """Add a memory."""
+        for message in messages:
+            self._memory_store.store_episodic_memory(
+                description=message["content"],
+                keywords=[],
+            )
 
-    # def update(self, memory_id: str, messages: list[dict[str, str]]) -> None:
+    # def update(self, memory_id: str, content: str) -> None:
     #     """Update a memory."""
 
     # def delete(self, memory_id: str) -> None:
