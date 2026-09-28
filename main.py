@@ -3,8 +3,11 @@ import sys
 
 from dotenv import load_dotenv
 
-from classes.cli import Cli
+from classes.memory_store import MemoryStore
+from classes.memory_system import MemorySystem
 from classes.open_router_client import OpenRouterClient
+from dev.cli import Cli
+from dev.mock_agent import MockAgent
 
 
 def load_openrouter_config():
@@ -23,8 +26,14 @@ def load_openrouter_config():
 def main() -> None:
     api_key, model = load_openrouter_config()
     open_router_client = OpenRouterClient(api_key=api_key, model=model)
+    memory_store = MemoryStore()
+    memory_system = MemorySystem(memory_store=memory_store)
+    mock_agent = MockAgent(
+        open_router_client=open_router_client,
+        memory_system=memory_system,
+    )
 
-    cli = Cli(open_router_client=open_router_client)
+    cli = Cli(mock_agent=mock_agent)
     cli.run()
 
 

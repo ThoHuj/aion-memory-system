@@ -1,12 +1,11 @@
-from classes.open_router_client import OpenRouterClient
+from dev.mock_agent import MockAgent
 
 
 class Cli:
     """Command-line interface."""
 
-    def __init__(self, open_router_client: OpenRouterClient) -> None:
-        self._open_router_client = open_router_client
-        self._messages: list[dict[str, str]] = []
+    def __init__(self, mock_agent: MockAgent) -> None:
+        self._mock_agent = mock_agent
 
     def run(self) -> None:
         """Run the interactive command-line loop."""
@@ -25,15 +24,12 @@ class Cli:
         """Send user input to the language model and print the response."""
         print()
         print("=" * 60)
-        self._messages.append({"role": "user", "content": user_input})
         try:
-            response = self._open_router_client.complete(self._messages)
+            response = self._mock_agent.handle_user_input(user_input)
         except RuntimeError as error:
-            self._messages.pop()
             print(f"Error: {error}")
             return
 
-        self._messages.append({"role": "assistant", "content": response})
         print("Assistant:")
         print(response)
         print()
