@@ -4,15 +4,20 @@ from classes.open_router_client import OpenRouterClient
 
 EPISODIC_MEMORY_EXTRACTION_PROMPT = """You extract episodic memories from a conversation.
 
-An episodic memory is a discrete event or interaction worth remembering later.
+Purpose: 
+- The memories will be stored in a database and retrieved before each LLM conversation in the future to give the agent a long-term memory.
+
+What to **not** extract: 
+- Do not extract memories that an LLM doesn't need to store in a long-term memory database.
 
 Review the conversation messages and identify episodic memories. For each one, provide:
 - description: a concise summary of what happened
-- keywords: search terms that would help retrieve this memory later"""
+- keywords: search terms that would help retrieve this memory later
+- extraction_reason: why this specific moment qualifies as an episodic memory worth storing"""
 
 
 class MemorySystem:
-    """Memory system."""
+    """A high-level interface for extracting, storing, and retrieving agent memories."""
 
     def __init__(
         self,
@@ -29,6 +34,7 @@ class MemorySystem:
             self._memory_store.store_episodic_memory(
                 description=episodic_memory.description,
                 keywords=episodic_memory.keywords,
+                extraction_reason=episodic_memory.extraction_reason,
             )
 
     def _extract_episodic_memories(
