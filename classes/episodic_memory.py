@@ -6,6 +6,9 @@ class EpisodicMemory(BaseModel):
 
     description: str
     keywords: list[str] = Field(default_factory=list)
+    extraction_reason: str = Field(
+        description="Why this moment was chosen as an episodic memory worth storing."
+    )
 
 
 class EpisodicMemoryExtractionResult(BaseModel):
