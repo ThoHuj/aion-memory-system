@@ -12,11 +12,25 @@ class MemoryStore:
     ) -> None:
         self._episodic_memories_path = episodic_memories_path
 
+    def load_episodic_memories(self) -> list[dict[str, object]]:
+        """Load all episodic memories from storage."""
+        if not self._episodic_memories_path.exists():
+            return []
+
+        file_contents = self._episodic_memories_path.read_text()
+        elements = json.loads(file_contents)
+        if not isinstance(elements, list):
+            raise TypeError(
+                f"Expected a JSON array in {self._episodic_memories_path}"
+            )
+        return elements
+
     def store_episodic_memory(
         self,
         description: str,
         keywords: list[str],
         extraction_reason: str,
+        embedding: list[float],
     ) -> None:
         """Store an episodic memory."""
         episodic_memory = {
@@ -24,6 +38,7 @@ class MemoryStore:
             "description": description,
             "keywords": keywords,
             "extraction_reason": extraction_reason,
+            "embedding": embedding,
             "timestamp": datetime.now(UTC).isoformat(),
         }
         self._add_element_to_json(self._episodic_memories_path, episodic_memory)

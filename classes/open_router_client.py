@@ -6,6 +6,7 @@ from typing import TypeVar
 from pydantic import BaseModel, ValidationError
 
 CHAT_COMPLETIONS_URL = "https://openrouter.ai/api/v1/chat/completions"
+EMBEDDINGS_URL = "https://openrouter.ai/api/v1/embeddings"
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -31,9 +32,57 @@ def _strict_json_schema(model: type[BaseModel]) -> dict[str, object]:
 class OpenRouterClient:
     """Send chat completion requests to OpenRouter."""
 
-    def __init__(self, api_key: str, model: str) -> None:
+    def __init__(
+        self, api_key: str, model: str, embedding_model: str
+    ) -> None:
         self._api_key = api_key
         self._model = model
+        self._embedding_model = embedding_model
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        """Return embedding vectors for the given texts in a single request."""
+        if not texts:
+            return []
+
+        request_body = json.dumps(
+            {
+                "model": self._embedding_model,
+                "input": texts,
+            }
+        ).encode()
+        request = urllib.request.Request(
+            EMBEDDINGS_URL,
+            data=request_body,
+            headers={
+                "Authorization": f"Bearer {self._api_key}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request) as response:
+                response_body = json.loads(response.read())
+        except urllib.error.HTTPError as error:
+            error_body = error.read().decode()
+            raise RuntimeError(
+                f"OpenRouter embedding request failed ({error.code}): {error_body}"
+            ) from error
+
+        data = response_body["data"]
+        if not isinstance(data, list) or len(data) != len(texts):
+            raise RuntimeError("OpenRouter embedding response count mismatch")
+
+        sorted_data = sorted(data, key=lambda item: item["index"])
+        embeddings: list[list[float]] = []
+        for item in sorted_data:
+            embedding = item.get("embedding")
+            if not isinstance(embedding, list):
+                raise TypeError(
+                    "OpenRouter embedding response missing embedding vector"
+                )
+            embeddings.append(embedding)
+
+        return embeddings
 
     def complete(self, messages: list[dict[str, str]]) -> str:
         """Send a message history and return the model response text."""
