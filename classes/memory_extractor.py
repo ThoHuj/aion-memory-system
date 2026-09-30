@@ -10,6 +10,8 @@ An episodic memory is a past event involving a decision, outcome, or development
 
 If no event qualifies, return an empty list.
 
+If the conversation has no substantive user or assistant text (empty, whitespace-only, or missing dialogue), return an empty list. Do not invent or infer events that are not clearly stated in the messages.
+
 For each memory:
 - description: what happened
 - keywords: search terms for retrieval
