@@ -26,5 +26,13 @@ class MockAgent:
             raise
 
         self._messages.append({"role": "assistant", "content": response})
-        self._memory_system.add(self._messages[-MESSAGES_FOR_MEMORY_AMOUNT:])
+
+        # Trim empty messages before memory extraction
+        memory_extraction_messages = [
+            message
+            for message in self._messages[-MESSAGES_FOR_MEMORY_AMOUNT:]
+            if (content := message.get("content")) is not None and content.strip()
+        ]
+        # Extract memories
+        self._memory_system.add(memory_extraction_messages)
         return response
