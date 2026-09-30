@@ -1,4 +1,4 @@
-from classes.episodic_memory_models import (
+from classes.models import (
     EpisodicMemoryCandidate,
     EpisodicMemoryExtractionResult,
 )

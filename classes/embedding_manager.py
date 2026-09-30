@@ -1,6 +1,6 @@
 import numpy as np
 
-from classes.episodic_memory_models import EpisodicMemoryCandidate
+from classes.models import EpisodicMemoryCandidate
 from classes.open_router_client import OpenRouterClient
 
 EPISODIC_MEMORY_SIMILARITY_THRESHOLD = 0.85
