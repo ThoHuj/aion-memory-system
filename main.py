@@ -3,6 +3,8 @@ import sys
 
 from dotenv import load_dotenv
 
+from classes.embedding_manager import EmbeddingManager
+from classes.memory_extractor import MemoryExtractor
 from classes.memory_store import MemoryStore
 from classes.memory_system import MemorySystem
 from classes.open_router_client import OpenRouterClient
@@ -35,9 +37,12 @@ def main() -> None:
         embedding_model=embedding_model,
     )
     memory_store = MemoryStore()
+    memory_extractor = MemoryExtractor(open_router_client=open_router_client)
+    embedding_manager = EmbeddingManager(open_router_client=open_router_client)
     memory_system = MemorySystem(
         memory_store=memory_store,
-        open_router_client=open_router_client,
+        memory_extractor=memory_extractor,
+        embedding_manager=embedding_manager,
     )
     mock_agent = MockAgent(
         open_router_client=open_router_client,
