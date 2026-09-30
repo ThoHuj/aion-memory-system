@@ -1,5 +1,3 @@
-import numpy as np
-
 from classes.models import EpisodicMemoryCandidate
 from classes.open_router_client import OpenRouterClient
 
@@ -29,12 +27,12 @@ class EmbeddingManager:
             return description
         return f"{description}\n{', '.join(keywords)}"
 
-    def stored_embedding_matrix(
+    def get_stored_memory_embeddings(
         self, stored_memories: list[dict[str, object]]
-    ) -> np.ndarray:
-        """Build a matrix of stored memory embeddings, embedding legacy rows if needed."""
+    ) -> list[list[float]]:
+        """Return embedding vectors for stored memories, embedding legacy rows if needed."""
         if not stored_memories:
-            return np.empty((0, 0))
+            return []
 
         vectors: list[list[float] | None] = [None] * len(stored_memories)
         descriptions_to_embed: list[str] = []
@@ -55,9 +53,7 @@ class EmbeddingManager:
                 if isinstance(raw_keywords, list)
                 else []
             )
-            descriptions_to_embed.append(
-                self.text_for_embedding(description, keywords)
-            )
+            descriptions_to_embed.append(self.text_for_embedding(description, keywords))
             indices_to_embed.append(index)
 
         if descriptions_to_embed:
@@ -66,34 +62,41 @@ class EmbeddingManager:
                 vectors[index] = vector
 
         if any(vector is None for vector in vectors):
-            raise RuntimeError("Failed to build embedding matrix for stored memories")
+            raise RuntimeError("Failed to build embeddings for stored memories")
 
-        return np.asarray(vectors)
+        return [vector for vector in vectors if vector is not None]
+
+    @staticmethod
+    def calculate_cosine_similarity(left: list[float], right: list[float]) -> float:
+        """Cosine similarity between two embedding vectors."""
+        dot = sum(a * b for a, b in zip(left, right))
+        left_norm = sum(a * a for a in left) ** 0.5
+        right_norm = sum(b * b for b in right) ** 0.5
+        if left_norm == 0 or right_norm == 0:
+            return 0.0
+        return dot / (left_norm * right_norm)
+
+    def max_similarity_to_stored(
+        self, candidate_embedding: list[float], stored_embeddings: list[list[float]]
+    ) -> float:
+        """Highest cosine similarity between one candidate and any stored memory."""
+        if not stored_embeddings:
+            return 0.0
+        return max(
+            self.calculate_cosine_similarity(candidate_embedding, stored)
+            for stored in stored_embeddings
+        )
 
     def filter_duplicate_candidates(
         self,
         candidates: list[EpisodicMemoryCandidate],
         candidate_embeddings: list[list[float]],
-        stored_embedding_matrix: np.ndarray,
+        stored_embeddings: list[list[float]],
     ) -> list[tuple[EpisodicMemoryCandidate, list[float]]]:
         """Discard candidates whose max similarity to stored memories exceeds the threshold."""
-        if stored_embedding_matrix.size == 0:
-            return list(zip(candidates, candidate_embeddings))
-
-        candidate_matrix = np.asarray(candidate_embeddings)
-        stored_norms = np.linalg.norm(stored_embedding_matrix, axis=1)
-        candidate_norms = np.linalg.norm(candidate_matrix, axis=1)
-        similarities = (
-            candidate_matrix
-            @ stored_embedding_matrix.T
-            / (candidate_norms[:, np.newaxis] * stored_norms)
-        )
-        max_similarities = np.max(similarities, axis=1)
-
-        return [
-            (candidate, embedding)
-            for candidate, embedding, similarity in zip(
-                candidates, candidate_embeddings, max_similarities
-            )
-            if similarity < EPISODIC_MEMORY_SIMILARITY_THRESHOLD
-        ]
+        unique: list[tuple[EpisodicMemoryCandidate, list[float]]] = []
+        for candidate, embedding in zip(candidates, candidate_embeddings):
+            similarity = self.max_similarity_to_stored(embedding, stored_embeddings)
+            if similarity < EPISODIC_MEMORY_SIMILARITY_THRESHOLD:
+                unique.append((candidate, embedding))
+        return unique

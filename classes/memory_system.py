@@ -18,8 +18,8 @@ class MemorySystem:
 
     def add(self, messages: list[dict[str, str]]) -> None:
         """Extract episodic memories from the conversation, omit near-duplicates, and store the rest."""
-        episodic_memory_candidates = (
-            self._memory_extractor.extract_episodic_candidates(messages)
+        episodic_memory_candidates = self._memory_extractor.extract_episodic_candidates(
+            messages
         )
         if not episodic_memory_candidates:
             return
@@ -28,13 +28,13 @@ class MemorySystem:
         candidate_embeddings = self._embedding_manager.embed_episodic_candidates(
             episodic_memory_candidates
         )
-        stored_embedding_matrix = self._embedding_manager.stored_embedding_matrix(
+        stored_embeddings = self._embedding_manager.get_stored_memory_embeddings(
             stored_memories
         )
         unique_candidates = self._embedding_manager.filter_duplicate_candidates(
             episodic_memory_candidates,
             candidate_embeddings,
-            stored_embedding_matrix,
+            stored_embeddings,
         )
 
         for candidate, embedding in unique_candidates:
