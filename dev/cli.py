@@ -1,4 +1,5 @@
 from dev.mock_agent import MockAgent
+from dev.slash_commands import SlashCommandError, execute_slash_command
 
 
 class Cli:
@@ -18,7 +19,19 @@ class Cli:
             if user_input == "q":
                 print("Quit")
                 break
+            if user_input.strip().startswith("/"):
+                self._handle_slash_command(user_input)
+                continue
             self._handle_user_input(user_input)
+
+    def _handle_slash_command(self, user_input: str) -> None:
+        """Parse and run a slash command without calling the language model."""
+        try:
+            message = execute_slash_command(user_input)
+        except SlashCommandError as error:
+            print(f"Command error: {error}")
+            return
+        print(message)
 
     def _handle_user_input(self, user_input: str) -> None:
         """Send user input to the language model and print the response."""
