@@ -223,5 +223,8 @@ data/episodic_memories.json
 # Exported LangSmith traces (local test fixtures)
 dev/past_traces/
 
+# Parsed episodic memories for local dev inspection
+dev/data/
+
 # Project-local agent guidance
 AGENTS.md

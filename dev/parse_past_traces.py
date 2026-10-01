@@ -1,9 +1,10 @@
 import json
 from pathlib import Path
 
-_REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
+_DEV_DIRECTORY = Path(__file__).resolve().parent
+_REPOSITORY_ROOT = _DEV_DIRECTORY.parent
 _DEFAULT_EPISODIC_MEMORIES_PATH = _REPOSITORY_ROOT / "data" / "episodic_memories.json"
-_DEFAULT_OUTPUT_PATH = _REPOSITORY_ROOT / "episodic_memories.json"
+_DEFAULT_OUTPUT_PATH = _DEV_DIRECTORY / "data" / "episodic_memories.json"
 
 
 _STRIPPED_KEYS = ("embedding", "uuid")
@@ -15,7 +16,7 @@ def strip_embeddings_from_episodic_memories(
 ) -> int:
     """
     Load episodic memories from JSON, remove ``embedding`` and ``uuid`` from each
-    record, and write the result to the project root (default: ``episodic_memories.json``).
+    record, and write the result under ``dev/data/`` (default: ``episodic_memories.json``).
 
     The source file under ``data/`` is not modified.
 
@@ -37,6 +38,7 @@ def strip_embeddings_from_episodic_memories(
             for key in _STRIPPED_KEYS:
                 element.pop(key, None)
 
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(
         json.dumps(elements, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
@@ -48,5 +50,5 @@ if __name__ == "__main__":
     count = strip_embeddings_from_episodic_memories()
     print(
         f"Wrote {count} episodic memories (without embedding or uuid) to "
-        f"{_DEFAULT_OUTPUT_PATH.name} in project root."
+        f"{_DEFAULT_OUTPUT_PATH.relative_to(_REPOSITORY_ROOT)}."
     )

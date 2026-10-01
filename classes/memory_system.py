@@ -5,7 +5,7 @@ from classes.memory_store import MemoryStore
 _EXTRACTION_DIALOGUE_ROLES = frozenset({"user", "assistant"})
 
 
-def _has_substantive_dialogue(messages: list[dict[str, str]]) -> bool:
+def _has_any_dialogue(messages: list[dict[str, str]]) -> bool:
     """True if at least one user or assistant message has non-whitespace content."""
     for message in messages:
         if message.get("role") not in _EXTRACTION_DIALOGUE_ROLES:
@@ -32,7 +32,7 @@ class MemorySystem:
     def add(self, messages: list[dict[str, str]]) -> None:
         """Extract episodic memories from the conversation, omit near-duplicates, and store the rest."""
         # 1. Check for substantive dialogue from user or assistant before extracting.
-        if not _has_substantive_dialogue(messages):
+        if not _has_any_dialogue(messages):
             return
 
         # 2. Use the memory extractor to find new episodic memory candidates from the current messages
