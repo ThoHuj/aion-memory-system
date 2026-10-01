@@ -4,6 +4,9 @@ from classes.memory_store import MemoryStore
 
 _EXTRACTION_DIALOGUE_ROLES = frozenset({"user", "assistant"})
 
+# Set False to skip embedding API calls and near-duplicate filtering in add().
+_EMBEDDINGS_ENABLED = False
+
 
 def _has_any_dialogue(messages: list[dict[str, str]]) -> bool:
     """True if at least one user or assistant message has non-whitespace content."""
@@ -42,23 +45,28 @@ class MemorySystem:
         if not episodic_memory_candidates:
             return
 
-        # 3. Load stored episodic memories for deduplication and comparison
-        stored_memories = self._memory_store.load_episodic_memories()
+        if _EMBEDDINGS_ENABLED:
+            # 3. Load stored episodic memories for deduplication and comparison
+            stored_memories = self._memory_store.load_episodic_memories()
 
-        # 4. Embed the new candidates and all currently stored episodic memories
-        candidate_embeddings = self._embedding_manager.embed_episodic_candidates(
-            episodic_memory_candidates
-        )
-        stored_embeddings = self._embedding_manager.get_stored_memory_embeddings(
-            stored_memories
-        )
+            # 4. Embed the new candidates and all currently stored episodic memories
+            candidate_embeddings = self._embedding_manager.embed_episodic_candidates(
+                episodic_memory_candidates
+            )
+            stored_embeddings = self._embedding_manager.get_stored_memory_embeddings(
+                stored_memories
+            )
 
-        # 5. Filter out candidate memories that are near-duplicates of those already stored
-        unique_candidates = self._embedding_manager.filter_duplicate_candidates(
-            episodic_memory_candidates,
-            candidate_embeddings,
-            stored_embeddings,
-        )
+            # 5. Filter out candidate memories that are near-duplicates of those already stored
+            unique_candidates = self._embedding_manager.filter_duplicate_candidates(
+                episodic_memory_candidates,
+                candidate_embeddings,
+                stored_embeddings,
+            )
+        else:
+            unique_candidates = [
+                (candidate, []) for candidate in episodic_memory_candidates
+            ]
 
         # 6. Store only the unique (non-duplicate) candidate memories in the memory store
         for candidate, embedding in unique_candidates:
