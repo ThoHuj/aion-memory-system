@@ -20,9 +20,7 @@ class MemoryStore:
         file_contents = self._episodic_memories_path.read_text()
         elements = json.loads(file_contents)
         if not isinstance(elements, list):
-            raise TypeError(
-                f"Expected a JSON array in {self._episodic_memories_path}"
-            )
+            raise TypeError(f"Expected a JSON array in {self._episodic_memories_path}")
         return elements
 
     def store_episodic_memory(

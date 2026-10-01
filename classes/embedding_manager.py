@@ -1,7 +1,7 @@
 from classes.models import EpisodicMemoryCandidate
 from classes.open_router_client import OpenRouterClient
 
-EPISODIC_MEMORY_SIMILARITY_THRESHOLD = 0.88
+EPISODIC_MEMORY_SIMILARITY_THRESHOLD = 0.99  # 0.88
 
 
 class EmbeddingManager:

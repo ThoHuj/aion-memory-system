@@ -27,7 +27,7 @@ class Cli:
     def _handle_slash_command(self, user_input: str) -> None:
         """Parse and run a slash command without calling the language model."""
         try:
-            message = execute_slash_command(user_input)
+            message = execute_slash_command(user_input, self._mock_agent)
         except SlashCommandError as error:
             print(f"Command error: {error}")
             return

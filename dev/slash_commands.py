@@ -1,7 +1,10 @@
 import json
 import random
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from dev.mock_agent import MockAgent
 
 PAST_TRACES_DIRECTORY = Path(__file__).resolve().parent / "past_traces"
 
@@ -24,18 +27,18 @@ def parse_slash_command_line(line: str) -> tuple[str, str] | None:
     return command_name, arguments
 
 
-def execute_slash_command(line: str) -> str:
+def execute_slash_command(line: str, mock_agent: "MockAgent") -> str:
     """Run a slash command and return text to print to the user."""
     parsed = parse_slash_command_line(line)
     if parsed is None:
         raise SlashCommandError("Not a slash command.")
     command_name, arguments = parsed
     if command_name == "import":
-        return _execute_import_command(arguments)
+        return _execute_import_command(arguments, mock_agent)
     raise SlashCommandError(f"Unknown command: /{command_name}")
 
 
-def _execute_import_command(arguments: str) -> str:
+def _execute_import_command(arguments: str, mock_agent: "MockAgent") -> str:
     if not arguments:
         raise SlashCommandError(
             "Usage: /import <filename>  or  /import -r"
@@ -46,9 +49,11 @@ def _execute_import_command(arguments: str) -> str:
         trace_path = _resolve_trace_path(arguments)
     payload = _load_trace_payload(trace_path)
     messages = _extract_dialogue_messages(payload)
+    extraction_passes = mock_agent.import_conversation_history(messages)
     return (
         f"Imported {trace_path.name}: {len(messages)} dialogue messages "
-        f"({_dialogue_character_count(messages)} characters)."
+        f"({_dialogue_character_count(messages)} characters), "
+        f"{extraction_passes} memory extraction passes."
     )
 
 

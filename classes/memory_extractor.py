@@ -8,14 +8,24 @@ EPISODIC_MEMORY_EXTRACTION_PROMPT = """Extract episodic memories from this conve
 
 An episodic memory is a past event involving a decision, outcome, or development — not a passing update on the user's current state. Store events, not facts about the user (those belong elsewhere). This is not a conversation log. Most exchanges yield none.
 
+Be careful - do not extract memories from the wrong dimension. Extract memories from the _conversation_ you are given.
+
 If no event qualifies, return an empty list.
 
 If the conversation has no substantive user or assistant text (empty, whitespace-only, or missing dialogue), return an empty list. Do not invent or infer events that are not clearly stated in the messages.
 
 For each memory:
 - description: what happened
-- keywords: search terms for retrieval
-- extraction_reason: how retrieving this would change what the agent should do or prioritize"""
+- keywords: for retrieval"""
+# - extraction_reason: how retrieving this would change what the agent should do or prioritize"""
+
+EPISODIC_MEMORY_EXTRACTION_PROMPT = """You are a tool that is part of an agentic memory system. 
+Your purpose is to extract meaningful episodic memories that makes sense for an agent to store in their long-term memory.
+You write memories efficently and concisely.
+
+For each memory:
+- description: what happened
+- keywords: for retrieval"""
 
 
 class MemoryExtractor:

@@ -5,12 +5,10 @@ class EpisodicMemoryCandidate(BaseModel):
     """An episodic memory extracted from a conversation, before embedding."""
 
     description: str = Field(
-        description="What happened — a decision, outcome, or development."
+        description="What happened — an event, a decision, an outcome, or development."
     )
     keywords: list[str] = Field(default_factory=list)
-    extraction_reason: str = Field(
-        description="How retrieving this would change what the agent should do or prioritize."
-    )
+    extraction_reason: str = Field(description="One word only.")
 
 
 class EpisodicMemory(EpisodicMemoryCandidate):
