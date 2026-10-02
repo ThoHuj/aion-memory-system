@@ -37,7 +37,10 @@ def main() -> None:
         embedding_model=embedding_model,
     )
     memory_store = MemoryStore()
-    memory_extractor = MemoryExtractor(open_router_client=open_router_client)
+    memory_extractor = MemoryExtractor(
+        open_router_client=open_router_client,
+        memory_store=memory_store,
+    )
     embedding_manager = EmbeddingManager(open_router_client=open_router_client)
     memory_system = MemorySystem(
         memory_store=memory_store,

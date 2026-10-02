@@ -1,4 +1,4 @@
-from classes.models import EpisodicMemoryCandidate
+from classes.models import EpisodicMemoryCreate
 from classes.open_router_client import OpenRouterClient
 
 EPISODIC_MEMORY_SIMILARITY_THRESHOLD = 0.99  # 0.88
@@ -11,9 +11,9 @@ class EmbeddingManager:
         self._open_router_client = open_router_client
 
     def embed_episodic_candidates(
-        self, candidates: list[EpisodicMemoryCandidate]
+        self, candidates: list[EpisodicMemoryCreate]
     ) -> list[list[float]]:
-        """Return embedding vectors for episodic memory candidates in one request."""
+        """Return embedding vectors for episodic memory creates in one request."""
         texts = [
             self.text_for_embedding(candidate.description, candidate.keywords)
             for candidate in candidates
@@ -89,12 +89,12 @@ class EmbeddingManager:
 
     def filter_duplicate_candidates(
         self,
-        candidates: list[EpisodicMemoryCandidate],
+        candidates: list[EpisodicMemoryCreate],
         candidate_embeddings: list[list[float]],
         stored_embeddings: list[list[float]],
-    ) -> list[tuple[EpisodicMemoryCandidate, list[float]]]:
+    ) -> list[tuple[EpisodicMemoryCreate, list[float]]]:
         """Discard candidates whose max similarity to stored memories exceeds the threshold."""
-        unique: list[tuple[EpisodicMemoryCandidate, list[float]]] = []
+        unique: list[tuple[EpisodicMemoryCreate, list[float]]] = []
         for candidate, embedding in zip(candidates, candidate_embeddings):
             similarity = self.max_similarity_to_stored(embedding, stored_embeddings)
             if similarity < EPISODIC_MEMORY_SIMILARITY_THRESHOLD:

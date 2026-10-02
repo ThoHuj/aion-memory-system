@@ -4,9 +4,6 @@ from classes.memory_store import MemoryStore
 
 _EXTRACTION_DIALOGUE_ROLES = frozenset({"user", "assistant"})
 
-# Set False to skip embedding API calls and near-duplicate filtering in add().
-_EMBEDDINGS_ENABLED = False
-
 
 def _has_any_dialogue(messages: list[dict[str, str]]) -> bool:
     """True if at least one user or assistant message has non-whitespace content."""
@@ -32,49 +29,45 @@ class MemorySystem:
         self._memory_extractor = memory_extractor
         self._embedding_manager = embedding_manager
 
-    def add(self, messages: list[dict[str, str]]) -> None:
-        """Extract episodic memories from the conversation, omit near-duplicates, and store the rest."""
-        # 1. Check for substantive dialogue from user or assistant before extracting.
+    def add(self, thread_id: str, messages: list[dict[str, str]]) -> None:
+        """Extract episodic memory creates/updates from the conversation and persist them."""
         if not _has_any_dialogue(messages):
             return
 
-        # 2. Use the memory extractor to find new episodic memory candidates from the current messages
-        episodic_memory_candidates = self._memory_extractor.extract_episodic_candidates(
-            messages
+        extraction_result = self._memory_extractor.extract_episodic_memories(
+            thread_id, messages
         )
-        if not episodic_memory_candidates:
+        if not extraction_result.creates and not extraction_result.updates:
             return
 
-        if _EMBEDDINGS_ENABLED:
-            # 3. Load stored episodic memories for deduplication and comparison
-            stored_memories = self._memory_store.load_episodic_memories()
+        thread_memories = self._memory_store.load_episodic_memories_for_thread(
+            thread_id
+        )
+        thread_memory_uuids = {
+            memory_uuid
+            for memory in thread_memories
+            if isinstance((memory_uuid := memory.get("uuid")), str)
+        }
 
-            # 4. Embed the new candidates and all currently stored episodic memories
-            candidate_embeddings = self._embedding_manager.embed_episodic_candidates(
-                episodic_memory_candidates
-            )
-            stored_embeddings = self._embedding_manager.get_stored_memory_embeddings(
-                stored_memories
+        for update in extraction_result.updates:
+            if update.uuid not in thread_memory_uuids:
+                raise ValueError(
+                    f"Episodic memory update targets uuid not in thread {thread_id!r}: "
+                    f"{update.uuid!r}"
+                )
+            self._memory_store.update_episodic_memory(
+                memory_uuid=update.uuid,
+                description=update.description,
+                keywords=update.keywords,
             )
 
-            # 5. Filter out candidate memories that are near-duplicates of those already stored
-            unique_candidates = self._embedding_manager.filter_duplicate_candidates(
-                episodic_memory_candidates,
-                candidate_embeddings,
-                stored_embeddings,
-            )
-        else:
-            unique_candidates = [
-                (candidate, []) for candidate in episodic_memory_candidates
-            ]
-
-        # 6. Store only the unique (non-duplicate) candidate memories in the memory store
-        for candidate, embedding in unique_candidates:
+        for create in extraction_result.creates:
             self._memory_store.store_episodic_memory(
-                description=candidate.description,
-                keywords=candidate.keywords,
-                extraction_reason=candidate.extraction_reason,
-                embedding=embedding,
+                thread_id=thread_id,
+                description=create.description,
+                keywords=create.keywords,
+                extraction_reason=create.extraction_reason,
+                embedding=[],
             )
 
     # def update(self, memory_id: str, content: str) -> None:

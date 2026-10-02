@@ -1,3 +1,5 @@
+import uuid
+
 from classes.memory_system import MemorySystem
 from classes.open_router_client import OpenRouterClient
 
@@ -15,10 +17,9 @@ class MockAgent:
         self._open_router_client = open_router_client
         self._memory_system = memory_system
         self._messages: list[dict[str, str]] = []
+        self._thread_id = str(uuid.uuid4())
 
-    def import_conversation_history(
-        self, messages: list[dict[str, str]]
-    ) -> int:
+    def import_conversation_history(self, messages: list[dict[str, str]]) -> int:
         """Replace the active conversation and replay memory extraction per assistant turn."""
         self._messages = [
             {"role": message["role"], "content": message["content"]}
@@ -57,5 +58,5 @@ class MockAgent:
         ]
         if not memory_extraction_messages:
             return False
-        self._memory_system.add(memory_extraction_messages)
+        self._memory_system.add(self._thread_id, memory_extraction_messages)
         return True
