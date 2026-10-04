@@ -16,7 +16,10 @@ class MemorySystem:
 
     def add(self, messages: list[dict[str, str]]) -> None:
         """Extract episodic memory creates/updates/merges from the conversation and persist them."""
-        extract_memories_and_facts_from_messages(self._extraction_client, messages)
+        extraction_result = extract_memories_and_facts_from_messages(
+            self._extraction_client, messages
+        )
+        self._memory_store.store_extraction_result(extraction_result)
 
     # def update(self, memory_id: str, content: str) -> None:
     #     """Update a memory."""

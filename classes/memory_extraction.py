@@ -15,29 +15,18 @@ Each episode is a third-person summary.
 should persist beyond this episode (preferences, constraints, relationships, \
 standing obligations). One fact per item; concise standalone statements.
 
-3. retrieval_keywords — lowercase hyphenated keywords summarizing the window for \
-search and retrieval across episodic and semantic stores.
-
 Rules:
 - If the window is only greetings, small talk, or generic advice with no new \
-user-specific information, return empty episodic_memories, semantic_facts, and \
-retrieval_keywords.
+user-specific information, return empty episodic_memories and semantic_facts.
 - Do not invent information not supported by the conversation.
 - Prefer one rich episodic memory over many thin duplicates.
-- extraction_reason on an episodic memory is a short label for why it was stored \
-(e.g. task, preference, problem, plan).
 """
 
 
 class ExtractedEpisodicMemory(BaseModel):
     """Episodic memory extracted from a conversation window."""
 
-    description: str = Field(
-        description="Third-person summary of the episode to store."
-    )
-    extraction_reason: str = Field(
-        description="Short label for why this episode was extracted."
-    )
+    content: str = Field(description="Third-person summary of the episode to store.")
 
 
 class ExtractedSemanticFact(BaseModel):
@@ -54,9 +43,6 @@ class ExtractionResult(BaseModel):
     )
     semantic_facts: list[ExtractedSemanticFact] = Field(
         description="Semantic facts extracted from the window."
-    )
-    retrieval_keywords: list[str] = Field(
-        description="Keywords for retrieving content related to this window."
     )
 
 
@@ -80,8 +66,8 @@ def _build_extraction_messages(
         {
             "role": "user",
             "content": (
-                "Extract episodic memories, semantic facts, and retrieval keywords "
-                f"from this conversation window:\n\n{conversation_text}"
+                "Extract episodic memories and semantic facts from this "
+                f"conversation window:\n\n{conversation_text}"
             ),
         },
     ]
@@ -96,7 +82,6 @@ def extract_memories_and_facts_from_messages(
         return ExtractionResult(
             episodic_memories=[],
             semantic_facts=[],
-            retrieval_keywords=[],
         )
     extraction_messages = _build_extraction_messages(messages)
     return extraction_client.complete_structured(
