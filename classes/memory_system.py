@@ -1,4 +1,4 @@
-from classes.memory_conflict_resolution import ConflictResolver
+from classes.conflict_resolver import ConflictResolver
 from classes.memory_extractor import MemoryExtractor
 from classes.memory_store import MemoryStore
 

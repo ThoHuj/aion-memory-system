@@ -3,7 +3,8 @@ import sys
 
 from dotenv import load_dotenv
 
-from classes.memory_conflict_resolution import ConflictResolver
+from classes.conflict_resolver import ConflictResolver
+from classes.memory_embedder import MemoryEmbedder
 from classes.memory_extractor import MemoryExtractor
 from classes.memory_store import MemoryStore
 from classes.memory_system import MemorySystem
@@ -40,7 +41,8 @@ def main() -> None:
     embedding_client = OpenRouterClient(api_key=api_key, model=embedding_model)
     memory_store = MemoryStore()
     memory_extractor = MemoryExtractor(extraction_client=extraction_client)
-    conflict_resolver = ConflictResolver(embedding_client=embedding_client)
+    memory_embedder = MemoryEmbedder(embedding_client=embedding_client)
+    conflict_resolver = ConflictResolver(memory_embedder=memory_embedder)
     memory_system = MemorySystem(
         memory_store=memory_store,
         memory_extractor=memory_extractor,
