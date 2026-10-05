@@ -42,7 +42,10 @@ def main() -> None:
     memory_store = MemoryStore()
     memory_extractor = MemoryExtractor(extraction_client=extraction_client)
     memory_embedder = MemoryEmbedder(embedding_client=embedding_client)
-    conflict_resolver = ConflictResolver(memory_embedder=memory_embedder)
+    conflict_resolver = ConflictResolver(
+        memory_store=memory_store,
+        memory_embedder=memory_embedder,
+    )
     memory_system = MemorySystem(
         memory_store=memory_store,
         memory_extractor=memory_extractor,

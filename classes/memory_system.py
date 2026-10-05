@@ -21,10 +21,8 @@ class MemorySystem:
         extraction_result = (
             self._memory_extractor.extract_memories_and_facts_from_messages(messages)
         )
-        stored_memories = self._memory_store.read_memories_document()
         resolved_extraction_result = self._conflict_resolver.resolve_extraction_conflicts(
             extraction_result,
-            stored_memories,
         )
         self._memory_store.store_extraction_result(resolved_extraction_result)
 
