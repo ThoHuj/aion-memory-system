@@ -76,7 +76,7 @@ class MemoryStore:
         ):
             return
 
-        document = self._read_memories_document()
+        document = self.read_memories_document()
         document.episodic_memories.extend(
             EpisodicMemoryRecord.from_extracted_episodic_memory(extracted_memory)
             for extracted_memory in extraction_result.episodic_memories
@@ -87,7 +87,8 @@ class MemoryStore:
         )
         self._write_memories_document(document)
 
-    def _read_memories_document(self) -> MemoriesDocument:
+    def read_memories_document(self) -> MemoriesDocument:
+        """Return the current persisted episodic and semantic memories."""
         if not self._memories_path.exists():
             return MemoriesDocument()
 

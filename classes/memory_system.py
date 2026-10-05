@@ -1,3 +1,4 @@
+from classes.memory_conflict_resolution import resolve_extraction_conflicts
 from classes.memory_extraction import extract_memories_and_facts_from_messages
 from classes.memory_store import MemoryStore
 from classes.open_router_client import OpenRouterClient
@@ -19,7 +20,12 @@ class MemorySystem:
         extraction_result = extract_memories_and_facts_from_messages(
             self._extraction_client, messages
         )
-        self._memory_store.store_extraction_result(extraction_result)
+        stored_memories = self._memory_store.read_memories_document()
+        resolved_extraction_result = resolve_extraction_conflicts(
+            extraction_result,
+            stored_memories,
+        )
+        self._memory_store.store_extraction_result(resolved_extraction_result)
 
     # def update(self, memory_id: str, content: str) -> None:
     #     """Update a memory."""
