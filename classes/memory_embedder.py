@@ -1,4 +1,4 @@
-from classes.memory_extraction import ExtractedEpisodicMemory
+from classes.memory_models import ExtractedEpisodicMemory
 from classes.open_router_client import OpenRouterClient
 
 

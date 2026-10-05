@@ -6,7 +6,7 @@ from typing import Self
 
 from pydantic import BaseModel, Field
 
-from classes.memory_extraction import (
+from classes.memory_models import (
     ExtractedEpisodicMemory,
     ExtractedSemanticFact,
     ExtractionResult,
