@@ -1,8 +1,40 @@
+from enum import Enum
+
+from pydantic import BaseModel, Field
+
 from classes.memory_embedder import MemoryEmbedder
 from classes.memory_models import ExtractedEpisodicMemory, ExtractionResult
 from classes.memory_store import EpisodicMemoryRecord, MemoriesDocument, MemoryStore
 
-EPISODIC_MEMORY_CONFLICT_SIMILARITY_THRESHOLD = 0.88
+DEFINITE_DUPLICATE_MIN_SIMILARITY = 0.90
+LIKELY_DUPLICATE_MIN_SIMILARITY = 0.80
+POSSIBLE_UPDATE_MIN_SIMILARITY = 0.70
+
+
+class EpisodicSimilarityBand(str, Enum):
+    """Similarity band between a candidate and a stored episodic memory."""
+
+    DEFINITE_DUPLICATE = "definite_duplicate"
+    LIKELY_DUPLICATE = "likely_duplicate"
+    POSSIBLE_UPDATE = "possible_update"
+    DISTINCT_MEMORY = "distinct_memory"
+
+
+class ClassifiedStoredEpisodicSimilarity(BaseModel):
+    """One stored episodic memory and its similarity to a candidate."""
+
+    stored_memory: EpisodicMemoryRecord
+    similarity: float
+    band: EpisodicSimilarityBand
+
+
+class EpisodicCandidateSimilarityAnalysis(BaseModel):
+    """Similarity analysis for one candidate against stored episodic memories."""
+
+    overall_band: EpisodicSimilarityBand
+    related_stored_memories: list[ClassifiedStoredEpisodicSimilarity] = Field(
+        default_factory=list
+    )
 
 
 class ConflictResolver:
@@ -12,11 +44,9 @@ class ConflictResolver:
         self,
         memory_store: MemoryStore,
         memory_embedder: MemoryEmbedder,
-        similarity_threshold: float = EPISODIC_MEMORY_CONFLICT_SIMILARITY_THRESHOLD,
     ) -> None:
         self._memory_store = memory_store
         self._memory_embedder = memory_embedder
-        self._similarity_threshold = similarity_threshold
 
     def resolve_extraction_conflicts(
         self,
@@ -30,34 +60,32 @@ class ConflictResolver:
 
         episodic_memories_to_store: list[ExtractedEpisodicMemory] = []
         for candidate in embedded_episodic_memories:
-            conflicting_stored_memories = (
-                self._stored_episodic_memories_above_similarity_threshold(
-                    candidate,
-                    stored_memories,
-                )
+            analysis = self._analyze_episodic_candidate_similarity(
+                candidate,
+                stored_memories,
             )
-            if not conflicting_stored_memories:
+            if analysis.overall_band is EpisodicSimilarityBand.DISTINCT_MEMORY:
                 episodic_memories_to_store.append(candidate)
                 continue
-            self._handle_episodic_memory_conflict(
-                candidate,
-                conflicting_stored_memories,
-            )
+            self._handle_episodic_memory_conflict(candidate, analysis)
 
         return extraction_result.model_copy(
             update={"episodic_memories": episodic_memories_to_store}
         )
 
-    def _stored_episodic_memories_above_similarity_threshold(
+    def _analyze_episodic_candidate_similarity(
         self,
         candidate: ExtractedEpisodicMemory,
         stored_memories: MemoriesDocument,
-    ) -> list[EpisodicMemoryRecord]:
-        """Return all stored episodic memories at or above the similarity threshold."""
+    ) -> EpisodicCandidateSimilarityAnalysis:
+        """Classify similarity between a candidate and all stored episodic memories."""
         if not candidate.embedding:
-            return []
+            return EpisodicCandidateSimilarityAnalysis(
+                overall_band=EpisodicSimilarityBand.DISTINCT_MEMORY,
+            )
 
-        conflicting_stored_memories: list[EpisodicMemoryRecord] = []
+        highest_similarity = 0.0
+        related_stored_memories: list[ClassifiedStoredEpisodicSimilarity] = []
         for stored_memory in stored_memories.episodic_memories:
             if not stored_memory.embedding:
                 continue
@@ -65,9 +93,24 @@ class ConflictResolver:
                 candidate.embedding,
                 stored_memory.embedding,
             )
-            if similarity >= self._similarity_threshold:
-                conflicting_stored_memories.append(stored_memory)
-        return conflicting_stored_memories
+            if similarity > highest_similarity:
+                highest_similarity = similarity
+            band = classify_episodic_similarity(similarity)
+            if band is EpisodicSimilarityBand.DISTINCT_MEMORY:
+                continue
+            related_stored_memories.append(
+                ClassifiedStoredEpisodicSimilarity(
+                    stored_memory=stored_memory,
+                    similarity=similarity,
+                    band=band,
+                )
+            )
+
+        overall_band = classify_episodic_similarity(highest_similarity)
+        return EpisodicCandidateSimilarityAnalysis(
+            overall_band=overall_band,
+            related_stored_memories=related_stored_memories,
+        )
 
     @staticmethod
     def _cosine_similarity(left: list[float], right: list[float]) -> float:
@@ -84,7 +127,18 @@ class ConflictResolver:
     def _handle_episodic_memory_conflict(
         self,
         candidate: ExtractedEpisodicMemory,
-        conflicting_stored_memories: list[EpisodicMemoryRecord],
+        analysis: EpisodicCandidateSimilarityAnalysis,
     ) -> None:
         """Apply policy when a new episodic memory conflicts with existing ones."""
-        _ = candidate, conflicting_stored_memories
+        _ = candidate, analysis
+
+
+def classify_episodic_similarity(similarity: float) -> EpisodicSimilarityBand:
+    """Map a cosine similarity score to an episodic similarity band."""
+    if similarity >= DEFINITE_DUPLICATE_MIN_SIMILARITY:
+        return EpisodicSimilarityBand.DEFINITE_DUPLICATE
+    if similarity >= LIKELY_DUPLICATE_MIN_SIMILARITY:
+        return EpisodicSimilarityBand.LIKELY_DUPLICATE
+    if similarity >= POSSIBLE_UPDATE_MIN_SIMILARITY:
+        return EpisodicSimilarityBand.POSSIBLE_UPDATE
+    return EpisodicSimilarityBand.DISTINCT_MEMORY
