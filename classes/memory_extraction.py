@@ -27,6 +27,11 @@ class ExtractedEpisodicMemory(BaseModel):
     """Episodic memory extracted from a conversation window."""
 
     content: str = Field(description="Third-person summary of the episode to store.")
+    embedding: list[float] = Field(default_factory=list)
+
+
+class _ExtractedEpisodicMemoryPayload(BaseModel):
+    content: str = Field(description="Third-person summary of the episode to store.")
 
 
 class ExtractedSemanticFact(BaseModel):
@@ -39,6 +44,15 @@ class ExtractionResult(BaseModel):
     """Structured output from memory and fact extraction."""
 
     episodic_memories: list[ExtractedEpisodicMemory] = Field(
+        description="Episodic memories extracted from the window."
+    )
+    semantic_facts: list[ExtractedSemanticFact] = Field(
+        description="Semantic facts extracted from the window."
+    )
+
+
+class _ExtractionResultPayload(BaseModel):
+    episodic_memories: list[_ExtractedEpisodicMemoryPayload] = Field(
         description="Episodic memories extracted from the window."
     )
     semantic_facts: list[ExtractedSemanticFact] = Field(
@@ -84,7 +98,14 @@ def extract_memories_and_facts_from_messages(
             semantic_facts=[],
         )
     extraction_messages = _build_extraction_messages(messages)
-    return extraction_client.complete_structured(
+    payload = extraction_client.complete_structured(
         extraction_messages,
-        ExtractionResult,
+        _ExtractionResultPayload,
+    )
+    return ExtractionResult(
+        episodic_memories=[
+            ExtractedEpisodicMemory(content=episodic_memory.content)
+            for episodic_memory in payload.episodic_memories
+        ],
+        semantic_facts=payload.semantic_facts,
     )

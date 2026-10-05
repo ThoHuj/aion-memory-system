@@ -18,6 +18,7 @@ class EpisodicMemoryRecord(BaseModel):
 
     uuid: str = Field(default_factory=lambda: str(uuid.uuid4()))
     content: str
+    embedding: list[float] = Field(default_factory=list)
     created_at: str
     last_changed: str
 
@@ -29,6 +30,7 @@ class EpisodicMemoryRecord(BaseModel):
         timestamp = datetime.now(UTC).isoformat()
         return cls(
             content=extracted_memory.content,
+            embedding=list(extracted_memory.embedding),
             created_at=timestamp,
             last_changed=timestamp,
         )
