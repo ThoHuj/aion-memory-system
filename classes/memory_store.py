@@ -104,6 +104,27 @@ class MemoryStore:
             )
         return MemoriesDocument.model_validate(elements)
 
+    def write_memories_document(self, document: MemoriesDocument) -> None:
+        """Overwrite the memories JSON file from an in-memory document."""
+        self._write_memories_document(document)
+
+    def update_episodic_memory_in_document(
+        self,
+        document: MemoriesDocument,
+        memory_uuid: str,
+        content: str,
+        embedding: list[float],
+    ) -> bool:
+        """Update one episodic memory in a document; return False if uuid was not found."""
+        for stored_memory in document.episodic_memories:
+            if stored_memory.uuid != memory_uuid:
+                continue
+            stored_memory.content = content
+            stored_memory.embedding = embedding
+            stored_memory.last_changed = datetime.now(UTC).isoformat()
+            return True
+        return False
+
     def _write_memories_document(self, document: MemoriesDocument) -> None:
         self._memories_path.parent.mkdir(parents=True, exist_ok=True)
         self._memories_path.write_text(
