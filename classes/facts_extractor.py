@@ -43,9 +43,7 @@ class FactsExtractor:
             if related_facts
             else "(none)"
         )
-        recent_session_messages = self._messages_to_text(
-            lookup.recent_session_messages
-        )
+        recent_session_messages = self._messages_to_text(lookup.recent_session_messages)
         new_messages = self._messages_to_text(context_result.messages)
         user_content = (
             f"{_EXTRACTION_USER_PREAMBLE}\n\n"
@@ -64,7 +62,7 @@ class FactsExtractor:
             {"role": "user", "content": user_content},
         ]
 
-    def extract_facts_from_context_result(
+    def extract_facts(
         self,
         context_result: ContextResult,
     ) -> list[str]:

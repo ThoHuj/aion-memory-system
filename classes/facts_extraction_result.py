@@ -19,5 +19,8 @@ class NewFacts(BaseModel):
     def from_fact_strings(cls, fact_strings: list[str]) -> "NewFacts":
         """Build a pipeline result from raw extracted fact text."""
         return cls(
-            facts=[ExtractedFact(content=content) for content in fact_strings],
+            facts=[
+                ExtractedFact(content=content.strip())
+                for content in fact_strings
+            ],
         )

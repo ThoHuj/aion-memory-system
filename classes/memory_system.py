@@ -1,3 +1,4 @@
+from classes.conflict_resolver import ConflictResolver
 from classes.context_manager import ContextManager, ContextResult
 from classes.embedding_manager import EmbeddingManager
 from classes.facts_extraction_result import NewFacts
@@ -14,11 +15,13 @@ class MemorySystem:
         facts_extractor: FactsExtractor,
         context_manager: ContextManager,
         embedding_manager: EmbeddingManager,
+        conflict_resolver: ConflictResolver,
     ) -> None:
         self._facts_store = facts_store
         self._facts_extractor = facts_extractor
         self._context_manager = context_manager
         self._embedding_manager = embedding_manager
+        self._conflict_resolver = conflict_resolver
 
     def add(
         self,
@@ -32,11 +35,11 @@ class MemorySystem:
             user_id,
             session_id,
         )
-        extracted_fact_strings = (
-            self._facts_extractor.extract_facts_from_context_result(context_result)
-        )
+        extracted_fact_strings = self._facts_extractor.extract_facts(context_result)
         new_facts: NewFacts = NewFacts.from_fact_strings(extracted_fact_strings)
         self._embedding_manager.attach_embeddings(new_facts)
+        self._conflict_resolver.attach_fact_hashes(new_facts)
+        self._conflict_resolver.remove_duplicated_facts(new_facts)
 
     # def update(self, memory_id: str, content: str) -> None:
     #     """Update a memory."""

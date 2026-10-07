@@ -3,6 +3,7 @@ import sys
 
 from dotenv import load_dotenv
 
+from classes.conflict_resolver import ConflictResolver
 from classes.context_manager import ContextManager
 from classes.embedding_manager import EmbeddingManager
 from classes.facts_extractor import FactsExtractor
@@ -46,11 +47,13 @@ def main() -> None:
         embedding_manager=embedding_manager,
         facts_store=facts_store,
     )
+    conflict_resolver = ConflictResolver()
     memory_system = MemorySystem(
         facts_store=facts_store,
         facts_extractor=facts_extractor,
         context_manager=context_manager,
         embedding_manager=embedding_manager,
+        conflict_resolver=conflict_resolver,
     )
     mock_agent = MockAgent(
         open_router_client=open_router_client,
