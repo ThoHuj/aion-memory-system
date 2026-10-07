@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from classes.conflict_resolver import ConflictResolver
 from classes.context_manager import ContextManager
 from classes.embedding_manager import EmbeddingManager
+from classes.entity_extractor import EntityExtractor
 from classes.facts_extractor import FactsExtractor
 from classes.facts_store import FactsStore
 from classes.memory_system import MemorySystem
@@ -42,6 +43,7 @@ def main() -> None:
     embedding_client = OpenRouterClient(api_key=api_key, model=embedding_model)
     facts_store = FactsStore()
     facts_extractor = FactsExtractor(extraction_client=extraction_client)
+    entity_extractor = EntityExtractor(extraction_client=extraction_client)
     embedding_manager = EmbeddingManager(embedding_client=embedding_client)
     context_manager = ContextManager(
         embedding_manager=embedding_manager,
@@ -54,6 +56,7 @@ def main() -> None:
         context_manager=context_manager,
         embedding_manager=embedding_manager,
         conflict_resolver=conflict_resolver,
+        entity_extractor=entity_extractor,
     )
     mock_agent = MockAgent(
         open_router_client=open_router_client,

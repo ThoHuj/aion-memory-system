@@ -2,6 +2,7 @@ from classes.conflict_resolver import ConflictResolver
 from classes.context_manager import ContextManager, ContextResult
 from classes.embedding_manager import EmbeddingManager
 from classes.facts_extraction_result import NewFacts
+from classes.entity_extractor import EntityExtractor
 from classes.facts_extractor import FactsExtractor
 from classes.facts_store import FactsStore
 
@@ -16,12 +17,14 @@ class MemorySystem:
         context_manager: ContextManager,
         embedding_manager: EmbeddingManager,
         conflict_resolver: ConflictResolver,
+        entity_extractor: EntityExtractor,
     ) -> None:
         self._facts_store = facts_store
         self._facts_extractor = facts_extractor
         self._context_manager = context_manager
         self._embedding_manager = embedding_manager
         self._conflict_resolver = conflict_resolver
+        self._entity_extractor = entity_extractor
 
     def add(
         self,
@@ -40,6 +43,7 @@ class MemorySystem:
         self._embedding_manager.attach_embeddings(new_facts)
         self._conflict_resolver.attach_fact_hashes(new_facts)
         self._conflict_resolver.remove_duplicated_facts(new_facts, context_result)
+        self._entity_extractor.attach_entities(new_facts)
 
     # def update(self, memory_id: str, content: str) -> None:
     #     """Update a memory."""
