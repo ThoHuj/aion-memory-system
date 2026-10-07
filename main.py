@@ -50,6 +50,7 @@ def main() -> None:
         facts_store=facts_store,
         facts_extractor=facts_extractor,
         context_manager=context_manager,
+        embedding_manager=embedding_manager,
     )
     mock_agent = MockAgent(
         open_router_client=open_router_client,

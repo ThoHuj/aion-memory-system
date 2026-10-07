@@ -10,13 +10,13 @@ class ExtractedFact(BaseModel):
     entities: list[str] = Field(default_factory=list)
 
 
-class FactsExtractionResult(BaseModel):
+class NewFacts(BaseModel):
     """Facts and enrichments accumulated during MemorySystem.add."""
 
     facts: list[ExtractedFact] = Field(default_factory=list)
 
     @classmethod
-    def from_fact_strings(cls, fact_strings: list[str]) -> "FactsExtractionResult":
+    def from_fact_strings(cls, fact_strings: list[str]) -> "NewFacts":
         """Build a pipeline result from raw extracted fact text."""
         return cls(
             facts=[ExtractedFact(content=content) for content in fact_strings],

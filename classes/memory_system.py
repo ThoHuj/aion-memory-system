@@ -1,5 +1,6 @@
 from classes.context_manager import ContextManager, ContextResult
-from classes.facts_extraction_result import FactsExtractionResult
+from classes.embedding_manager import EmbeddingManager
+from classes.facts_extraction_result import NewFacts
 from classes.facts_extractor import FactsExtractor
 from classes.facts_store import FactsStore
 
@@ -12,10 +13,12 @@ class MemorySystem:
         facts_store: FactsStore,
         facts_extractor: FactsExtractor,
         context_manager: ContextManager,
+        embedding_manager: EmbeddingManager,
     ) -> None:
         self._facts_store = facts_store
         self._facts_extractor = facts_extractor
         self._context_manager = context_manager
+        self._embedding_manager = embedding_manager
 
     def add(
         self,
@@ -29,12 +32,11 @@ class MemorySystem:
             user_id,
             session_id,
         )
-        extracted_fact_strings = self._facts_extractor.extract_facts_from_context_result(
-            context_result
+        extracted_fact_strings = (
+            self._facts_extractor.extract_facts_from_context_result(context_result)
         )
-        facts_extraction_result: FactsExtractionResult = (
-            FactsExtractionResult.from_fact_strings(extracted_fact_strings)
-        )
+        new_facts: NewFacts = NewFacts.from_fact_strings(extracted_fact_strings)
+        self._embedding_manager.attach_embeddings(new_facts)
 
     # def update(self, memory_id: str, content: str) -> None:
     #     """Update a memory."""
