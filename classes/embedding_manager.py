@@ -1,7 +1,7 @@
 from classes.open_router_client import OpenRouterClient
 
 
-class MemoryEmbedder:
+class EmbeddingManager:
     """Attach embedding vectors to extracted episodic memories."""
 
     def __init__(self, embedding_client: OpenRouterClient) -> None:

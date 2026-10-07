@@ -1,5 +1,5 @@
-from classes.memory_extractor import MemoryExtractor
-from classes.memory_store import MemoryStore
+from classes.facts_extractor import FactsExtractor
+from classes.facts_store import FactsStore
 
 
 class MemorySystem:
@@ -7,11 +7,11 @@ class MemorySystem:
 
     def __init__(
         self,
-        memory_store: MemoryStore,
-        memory_extractor: MemoryExtractor,
+        facts_store: FactsStore,
+        facts_extractor: FactsExtractor,
     ) -> None:
-        self._memory_store = memory_store
-        self._memory_extractor = memory_extractor
+        self._facts_store = facts_store
+        self._facts_extractor = facts_extractor
 
     def add(self) -> None:
         """Extract memories and persist them."""

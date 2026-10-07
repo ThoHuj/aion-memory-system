@@ -1,7 +1,7 @@
 from classes.open_router_client import OpenRouterClient
 
 
-class MemoryExtractor:
+class FactsExtractor:
     """Extract episodic memories and semantic facts from conversation via structured LLM output."""
 
     def __init__(self, extraction_client: OpenRouterClient) -> None:

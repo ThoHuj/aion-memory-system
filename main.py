@@ -3,8 +3,8 @@ import sys
 
 from dotenv import load_dotenv
 
-from classes.memory_extractor import MemoryExtractor
-from classes.memory_store import MemoryStore
+from classes.facts_extractor import FactsExtractor
+from classes.facts_store import FactsStore
 from classes.memory_system import MemorySystem
 from classes.open_router_client import OpenRouterClient
 from dev.cli import Cli
@@ -32,11 +32,11 @@ def main() -> None:
     api_key, model, extraction_model = load_openrouter_config()
     open_router_client = OpenRouterClient(api_key=api_key, model=model)
     extraction_client = OpenRouterClient(api_key=api_key, model=extraction_model)
-    memory_store = MemoryStore()
-    memory_extractor = MemoryExtractor(extraction_client=extraction_client)
+    facts_store = FactsStore()
+    facts_extractor = FactsExtractor(extraction_client=extraction_client)
     memory_system = MemorySystem(
-        memory_store=memory_store,
-        memory_extractor=memory_extractor,
+        facts_store=facts_store,
+        facts_extractor=facts_extractor,
     )
     mock_agent = MockAgent(
         open_router_client=open_router_client,
