@@ -39,7 +39,7 @@ class MemorySystem:
         new_facts: NewFacts = NewFacts.from_fact_strings(extracted_fact_strings)
         self._embedding_manager.attach_embeddings(new_facts)
         self._conflict_resolver.attach_fact_hashes(new_facts)
-        self._conflict_resolver.remove_duplicated_facts(new_facts)
+        self._conflict_resolver.remove_duplicated_facts(new_facts, context_result)
 
     # def update(self, memory_id: str, content: str) -> None:
     #     """Update a memory."""
