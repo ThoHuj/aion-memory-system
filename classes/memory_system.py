@@ -1,5 +1,5 @@
 from classes.context_manager import ContextManager, ContextResult
-from classes.facts_extractor import FactsExtractor
+from classes.facts_extractor import FactsExtractionResult, FactsExtractor
 from classes.facts_store import FactsStore
 
 
@@ -27,6 +27,9 @@ class MemorySystem:
             messages,
             user_id,
             session_id,
+        )
+        facts_extraction_result: FactsExtractionResult = (
+            self._facts_extractor.extract_facts_from_context_result(context_result)
         )
 
     # def update(self, memory_id: str, content: str) -> None:
