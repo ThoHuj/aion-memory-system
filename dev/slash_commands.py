@@ -49,11 +49,10 @@ def _execute_import_command(arguments: str, mock_agent: "MockAgent") -> str:
         trace_path = _resolve_trace_path(arguments)
     payload = _load_trace_payload(trace_path)
     messages = _extract_dialogue_messages(payload)
-    extraction_passes = mock_agent.import_conversation_history(messages)
+    mock_agent.import_conversation_history(messages)
     return (
         f"Imported {trace_path.name}: {len(messages)} dialogue messages "
-        f"({_dialogue_character_count(messages)} characters), "
-        f"{extraction_passes} memory extraction passes."
+        f"({_dialogue_character_count(messages)} characters)."
     )
 
 
