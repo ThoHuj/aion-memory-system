@@ -4,8 +4,8 @@ from classes.context_manager import ContextResult
 from classes.open_router_client import OpenRouterClient
 
 
-class FactsExtractionResult(BaseModel):
-    """Structured fact strings returned by the extraction model."""
+class _FactsExtractionPayload(BaseModel):
+    """Structured LLM output for fact extraction."""
 
     facts: list[str] = Field(
         default_factory=list,
@@ -67,13 +67,14 @@ class FactsExtractor:
     def extract_facts_from_context_result(
         self,
         context_result: ContextResult,
-    ) -> FactsExtractionResult:
-        """Extract facts from a context result."""
+    ) -> list[str]:
+        """Return fact strings extracted from a context result."""
         extraction_messages = self._build_extraction_messages(context_result)
-        return self._extraction_client.complete_structured(
+        payload = self._extraction_client.complete_structured(
             extraction_messages,
-            FactsExtractionResult,
+            _FactsExtractionPayload,
         )
+        return payload.facts
 
     @staticmethod
     def _messages_to_text(messages: list[dict[str, str]]) -> str:
