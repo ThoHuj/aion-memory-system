@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 
 from classes.entity_extraction.prompts import (
+    ENTITY_EXTRACTION_ENTITIES_FIELD_DESCRIPTION,
     ENTITY_EXTRACTION_SYSTEM_PROMPT,
     format_entity_extraction_user_prompt,
 )
@@ -13,7 +14,7 @@ class _EntityExtractionPayload(BaseModel):
 
     entities: list[str] = Field(
         default_factory=list,
-        description="Named entities mentioned in the fact (people, places, organizations, etc.).",
+        description=ENTITY_EXTRACTION_ENTITIES_FIELD_DESCRIPTION,
     )
 
 
