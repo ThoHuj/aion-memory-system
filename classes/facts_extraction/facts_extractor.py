@@ -1,6 +1,11 @@
 from pydantic import BaseModel, Field
 
 from classes.context_manager import ContextResult
+from classes.facts_extraction.prompts import (
+    FACTS_EXTRACTION_FACTS_FIELD_DESCRIPTION,
+    FACTS_EXTRACTION_SYSTEM_PROMPT,
+    format_facts_extraction_user_prompt,
+)
 from classes.open_router_client import OpenRouterClient
 
 
@@ -9,20 +14,8 @@ class _FactsExtractionPayload(BaseModel):
 
     facts: list[str] = Field(
         default_factory=list,
-        description="Semantic facts extracted from the new messages.",
+        description=FACTS_EXTRACTION_FACTS_FIELD_DESCRIPTION,
     )
-
-
-_FACTS_EXTRACTION_SYSTEM_PROMPT = """\
-You extract stable semantic facts about the user and their world from conversation \
-context. Each fact should be a concise standalone statement. Do not invent \
-information that is not supported by the conversation.\
-"""
-
-_EXTRACTION_USER_PREAMBLE = """\
-Extract semantic facts for this turn. Ground new facts only in <new_messages>; \
-treat <semantic_search> and <recent_session_messages> as background.\
-"""
 
 
 class FactsExtractor:
@@ -45,20 +38,13 @@ class FactsExtractor:
         )
         recent_session_messages = self._messages_to_text(lookup.recent_session_messages)
         new_messages = self._messages_to_text(context_result.messages)
-        user_content = (
-            f"{_EXTRACTION_USER_PREAMBLE}\n\n"
-            "<semantic_search>\n"
-            f"{related_facts_text}\n"
-            "</semantic_search>\n\n"
-            "<recent_session_messages>\n"
-            f"{recent_session_messages}\n"
-            "</recent_session_messages>\n\n"
-            "<new_messages>\n"
-            f"{new_messages}\n"
-            "</new_messages>"
+        user_content = format_facts_extraction_user_prompt(
+            semantic_search=related_facts_text,
+            recent_session_messages=recent_session_messages,
+            new_messages=new_messages,
         )
         return [
-            {"role": "system", "content": _FACTS_EXTRACTION_SYSTEM_PROMPT},
+            {"role": "system", "content": FACTS_EXTRACTION_SYSTEM_PROMPT},
             {"role": "user", "content": user_content},
         ]
 

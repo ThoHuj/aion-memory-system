@@ -2,8 +2,8 @@ from classes.conflict_resolver import ConflictResolver
 from classes.context_manager import ContextManager, ContextResult
 from classes.embedding_manager import EmbeddingManager
 from classes.entity_extraction import EntityExtractor
+from classes.facts_extraction import FactsExtractor
 from classes.facts_extraction_result import NewFacts
-from classes.facts_extractor import FactsExtractor
 from classes.facts_store import FactsStore
 
 
