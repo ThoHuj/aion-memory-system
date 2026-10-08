@@ -1,20 +1,9 @@
-import hashlib
-
 from classes.context_manager import ContextResult
 from classes.facts_extraction_result import NewFacts
 
 
 class ConflictResolver:
     """Resolve conflicts between newly extracted facts and stored facts."""
-
-    def hash_fact(self, fact: str) -> str:
-        """Hash a fact string for duplicate detection."""
-        return hashlib.sha256(fact.encode("utf-8")).hexdigest()
-
-    def attach_fact_hashes(self, new_facts: NewFacts) -> None:
-        """Set fact_hash on each extracted fact from its content."""
-        for extracted_fact in new_facts.facts:
-            extracted_fact.fact_hash = self.hash_fact(extracted_fact.content)
 
     def remove_duplicated_facts(
         self,

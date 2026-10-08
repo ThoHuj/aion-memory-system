@@ -1,8 +1,8 @@
 from classes.conflict_resolver import ConflictResolver
 from classes.context_manager import ContextManager, ContextResult
 from classes.embedding_manager import EmbeddingManager
-from classes.facts_extraction_result import NewFacts
 from classes.entity_extractor import EntityExtractor
+from classes.facts_extraction_result import NewFacts
 from classes.facts_extractor import FactsExtractor
 from classes.facts_store import FactsStore
 
@@ -40,9 +40,8 @@ class MemorySystem:
         )
         extracted_fact_strings = self._facts_extractor.extract_facts(context_result)
         new_facts: NewFacts = NewFacts.from_fact_strings(extracted_fact_strings)
-        self._embedding_manager.attach_embeddings(new_facts)
-        self._conflict_resolver.attach_fact_hashes(new_facts)
         self._conflict_resolver.remove_duplicated_facts(new_facts, context_result)
+        self._embedding_manager.attach_embeddings(new_facts)
         self._entity_extractor.attach_entities(new_facts)
 
     # def update(self, memory_id: str, content: str) -> None:
