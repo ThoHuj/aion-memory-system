@@ -68,7 +68,8 @@ class ContextManager:
             combined_messages
         )
         vector_search_result = self._facts_store.search_nearest_facts(
-            combined_messages_embedding,
+            user_id,
+            combined_messages,
             self._nearest_facts_search_limit,
         )
         recent_session_messages = self._facts_store.get_most_recent_session_messages(

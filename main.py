@@ -41,10 +41,10 @@ def main() -> None:
     open_router_client = OpenRouterClient(api_key=api_key, model=model)
     extraction_client = OpenRouterClient(api_key=api_key, model=extraction_model)
     embedding_client = OpenRouterClient(api_key=api_key, model=embedding_model)
-    facts_store = FactsStore()
+    embedding_manager = EmbeddingManager(embedding_client=embedding_client)
+    facts_store = FactsStore(embedding_manager=embedding_manager)
     facts_extractor = FactsExtractor(extraction_client=extraction_client)
     entity_extractor = EntityExtractor(extraction_client=extraction_client)
-    embedding_manager = EmbeddingManager(embedding_client=embedding_client)
     context_manager = ContextManager(
         embedding_manager=embedding_manager,
         facts_store=facts_store,
@@ -61,6 +61,7 @@ def main() -> None:
     mock_agent = MockAgent(
         open_router_client=open_router_client,
         memory_system=memory_system,
+        facts_store=facts_store,
     )
 
     cli = Cli(mock_agent=mock_agent)

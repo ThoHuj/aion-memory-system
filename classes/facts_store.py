@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, TypeVar
 
 from pydantic import BaseModel, Field
 
+from classes.embedding_manager import EmbeddingManager
 from classes.facts_extraction_result import NewFacts
 
 if TYPE_CHECKING:
@@ -33,6 +34,7 @@ class VectorStoreFactRecord(BaseModel):
     """One fact persisted in the vector store."""
 
     fact_id: str
+    user_id: str = ""
     content: str
     fact_hash: str
     embedding: list[float] = Field(default_factory=list)
@@ -86,7 +88,12 @@ StoreDocument = TypeVar(
 class FactsStore:
     """Persists facts across vector, entity, and history backends (JSON v1)."""
 
-    def __init__(self, data_directory: Path = Path("data")) -> None:
+    def __init__(
+        self,
+        embedding_manager: EmbeddingManager,
+        data_directory: Path = Path("data"),
+    ) -> None:
+        self._embedding_manager = embedding_manager
         self._data_directory = data_directory
         self._vector_store_path = data_directory / "vector_store.json"
         self._entity_store_path = data_directory / "entity_store.json"
@@ -100,11 +107,18 @@ class FactsStore:
         """Persist new facts to the vector store, entity store, and history log."""
         if not new_facts.facts:
             return
-        self.store_facts_in_vector_store(new_facts)
+        self.store_facts_in_vector_store(
+            new_facts,
+            user_id=context_result.metadata.user_id,
+        )
         self.store_entities_for_facts(new_facts)
         self.log_fact_history(new_facts, context_result)
 
-    def store_facts_in_vector_store(self, new_facts: NewFacts) -> None:
+    def store_facts_in_vector_store(
+        self,
+        new_facts: NewFacts,
+        user_id: str,
+    ) -> None:
         """Append new facts to the vector store and set fact_id on each ExtractedFact."""
         document = self._read_vector_store_document()
         for extracted_fact in new_facts.facts:
@@ -113,6 +127,7 @@ class FactsStore:
             document.facts.append(
                 VectorStoreFactRecord(
                     fact_id=fact_id,
+                    user_id=user_id,
                     content=extracted_fact.content,
                     fact_hash=extracted_fact.fact_hash,
                     embedding=list(extracted_fact.embedding),
@@ -170,16 +185,23 @@ class FactsStore:
 
     def search_nearest_facts(
         self,
-        query_embedding: list[float],
+        user_id: str,
+        message: str,
         limit: int,
     ) -> VectorSearchResult:
-        """Return up to limit semantically nearest facts from the vector store."""
-        if not query_embedding or limit <= 0:
+        """Return up to limit nearest facts for user_id, semantically matching message."""
+        if limit <= 0 or not message.strip():
+            return VectorSearchResult()
+
+        query_embedding = self._embedding_manager.embed_string(message.strip())
+        if not query_embedding:
             return VectorSearchResult()
 
         document = self._read_vector_store_document()
         scored_facts: list[tuple[float, VectorStoreFactRecord]] = []
         for stored_fact in document.facts:
+            if stored_fact.user_id != user_id:
+                continue
             if not stored_fact.embedding:
                 continue
             similarity = _cosine_similarity(query_embedding, stored_fact.embedding)

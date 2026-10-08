@@ -1,7 +1,10 @@
 import uuid
 
+from classes.facts_store import FactsStore, VectorSearchResult
 from classes.memory_system import MemorySystem
 from classes.open_router_client import OpenRouterClient
+
+_CHAT_RELEVANT_FACTS_LIMIT = 10
 
 
 class MockAgent:
@@ -11,11 +14,13 @@ class MockAgent:
         self,
         open_router_client: OpenRouterClient,
         memory_system: MemorySystem,
+        facts_store: FactsStore,
         user_id: str = "Tjorven",
         session_id: str | None = None,
     ) -> None:
         self._open_router_client = open_router_client
         self._memory_system = memory_system
+        self._facts_store = facts_store
         self._user_id = user_id
         self._session_id = session_id or str(uuid.uuid4())
         self._messages: list[dict[str, str]] = []
@@ -35,13 +40,25 @@ class MockAgent:
 
     def handle_user_input(self, user_input: str) -> str:
         """Send user input to the model and store the latest turn in memory."""
-        self._messages.append({"role": "user", "content": user_input})
+        vector_search_result = self._facts_store.search_nearest_facts(
+            self._user_id,
+            user_input,
+            _CHAT_RELEVANT_FACTS_LIMIT,
+        )
+        relevant_facts_message = self._build_relevant_user_facts_message(
+            vector_search_result
+        )
+        messages_for_completion = [
+            *self._messages,
+            relevant_facts_message,
+            {"role": "user", "content": user_input},
+        ]
         try:
-            response = self._open_router_client.complete(self._messages)
+            response = self._open_router_client.complete(messages_for_completion)
         except RuntimeError:
-            self._messages.pop()
             raise
 
+        self._messages.append({"role": "user", "content": user_input})
         self._messages.append({"role": "assistant", "content": response})
         self._add_turn_to_memory(
             [
@@ -50,6 +67,25 @@ class MockAgent:
             ]
         )
         return response
+
+    @staticmethod
+    def _build_relevant_user_facts_message(
+        vector_search_result: VectorSearchResult,
+    ) -> dict[str, str]:
+        """Build a separate chat message with semantically retrieved user facts."""
+        if vector_search_result.facts:
+            fact_lines = "\n".join(
+                f"- {retrieved_fact.content}"
+                for retrieved_fact in vector_search_result.facts
+            )
+        else:
+            fact_lines = "(none)"
+        return {
+            "role": "user",
+            "content": (
+                f"<relevant_user_facts>\n{fact_lines}\n</relevant_user_facts>"
+            ),
+        }
 
     def _add_turn_to_memory(self, turn_messages: list[dict[str, str]]) -> None:
         """Run the memory add pipeline for one user/assistant turn."""
