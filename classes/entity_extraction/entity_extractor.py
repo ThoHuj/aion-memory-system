@@ -1,5 +1,9 @@
 from pydantic import BaseModel, Field
 
+from classes.entity_extraction.prompts import (
+    ENTITY_EXTRACTION_SYSTEM_PROMPT,
+    format_entity_extraction_user_prompt,
+)
 from classes.facts_extraction_result import NewFacts
 from classes.open_router_client import OpenRouterClient
 
@@ -11,17 +15,6 @@ class _EntityExtractionPayload(BaseModel):
         default_factory=list,
         description="Named entities mentioned in the fact (people, places, organizations, etc.).",
     )
-
-
-_ENTITY_EXTRACTION_SYSTEM_PROMPT = """\
-You extract named entities from a single semantic fact. Return people, organizations, \
-places, products, and other distinct proper nouns or stable identifiers explicitly \
-mentioned or clearly implied. Do not invent entities not supported by the fact.\
-"""
-
-_ENTITY_EXTRACTION_USER_PREAMBLE = """\
-Extract entities from the fact in <fact> below.\
-"""
 
 
 class EntityExtractor:
@@ -49,11 +42,8 @@ class EntityExtractor:
         fact: str,
     ) -> list[dict[str, str]]:
         """Build system and user messages for entity extraction on one fact."""
-        user_content = (
-            f"{_ENTITY_EXTRACTION_USER_PREAMBLE}\n\n"
-            f"<fact>\n{fact}\n</fact>"
-        )
+        user_content = format_entity_extraction_user_prompt(fact)
         return [
-            {"role": "system", "content": _ENTITY_EXTRACTION_SYSTEM_PROMPT},
+            {"role": "system", "content": ENTITY_EXTRACTION_SYSTEM_PROMPT},
             {"role": "user", "content": user_content},
         ]

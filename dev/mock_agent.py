@@ -82,9 +82,7 @@ class MockAgent:
             fact_lines = "(none)"
         return {
             "role": "user",
-            "content": (
-                f"<relevant_user_facts>\n{fact_lines}\n</relevant_user_facts>"
-            ),
+            "content": (f"<relevant_user_facts>\n{fact_lines}\n</relevant_user_facts>"),
         }
 
     def _add_turn_to_memory(self, turn_messages: list[dict[str, str]]) -> None:
