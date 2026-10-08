@@ -14,6 +14,7 @@ class ExtractedFact(BaseModel):
     content: str
     embedding: list[float] = Field(default_factory=list)
     fact_hash: str = ""
+    fact_id: str = ""
     entities: list[str] = Field(default_factory=list)
 
 

@@ -217,8 +217,8 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# Local memory data
-data/memories.json
+# Local memory stores (JSON v1; Postgres later)
+data/
 
 # Exported LangSmith traces (local test fixtures)
 dev/past_traces/
