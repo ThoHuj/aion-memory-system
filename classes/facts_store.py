@@ -5,7 +5,7 @@ import math
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
 
 from pydantic import BaseModel, Field
 
@@ -73,6 +73,14 @@ class FactHistoryDocument(BaseModel):
     """On-disk fact history payload."""
 
     entries: list[FactHistoryRecord] = Field(default_factory=list)
+
+
+StoreDocument = TypeVar(
+    "StoreDocument",
+    VectorStoreDocument,
+    EntityStoreDocument,
+    FactHistoryDocument,
+)
 
 
 class FactsStore:
@@ -200,9 +208,7 @@ class FactsStore:
 
         document = self._read_history_document()
         session_entries = [
-            entry
-            for entry in document.entries
-            if entry.session_id == session_id
+            entry for entry in document.entries if entry.session_id == session_id
         ]
         session_entries.sort(key=lambda entry: entry.created_at, reverse=True)
 
@@ -235,10 +241,8 @@ class FactsStore:
     def _read_document(
         self,
         path: Path,
-        document_model: type[VectorStoreDocument]
-        | type[EntityStoreDocument]
-        | type[FactHistoryDocument],
-    ) -> VectorStoreDocument | EntityStoreDocument | FactHistoryDocument:
+        document_model: type[StoreDocument],
+    ) -> StoreDocument:
         if not path.exists():
             return document_model()
         payload = json.loads(path.read_text(encoding="utf-8"))
