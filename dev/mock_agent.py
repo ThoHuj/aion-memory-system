@@ -1,6 +1,11 @@
 import uuid
 
-from classes.facts_store import FactsStore, VectorSearchResult
+from classes.facts_store import (
+    FactsStore,
+    VectorSearchResult,
+    format_retrieved_fact_line,
+    order_retrieved_facts_by_recency,
+)
 from classes.memory_system import MemorySystem
 from classes.open_router_client import OpenRouterClient
 from dev.session_logger import SessionLogger
@@ -45,15 +50,20 @@ class MockAgent:
 
     def handle_user_input(self, user_input: str) -> str:
         """Send user input to the model and store the latest turn in memory."""
-        vector_search_result = self._facts_store.search_nearest_facts(
-            self._user_id,
-            user_input,
-            _CHAT_RELEVANT_FACTS_LIMIT,
+        vector_search_result = order_retrieved_facts_by_recency(
+            self._facts_store.search_nearest_facts(
+                self._user_id,
+                user_input,
+                _CHAT_RELEVANT_FACTS_LIMIT,
+            )
         )
         if self._session_logger is not None:
             self._session_logger.log_retrieved_facts_for_chat(
                 user_input,
-                [fact.content for fact in vector_search_result.facts],
+                [
+                    format_retrieved_fact_line(retrieved_fact)
+                    for retrieved_fact in vector_search_result.facts
+                ],
             )
         relevant_facts_message = self._build_relevant_user_facts_message(
             vector_search_result
@@ -90,7 +100,7 @@ class MockAgent:
         """Build a separate chat message with semantically retrieved user facts."""
         if vector_search_result.facts:
             fact_lines = "\n".join(
-                f"- {retrieved_fact.content}"
+                f"- {format_retrieved_fact_line(retrieved_fact)}"
                 for retrieved_fact in vector_search_result.facts
             )
         else:
@@ -110,10 +120,7 @@ class MockAgent:
         if self._session_logger is not None:
             self._session_logger.log_memory_add(
                 turn_messages,
-                [
-                    stored_fact.model_dump()
-                    for stored_fact in add_result.stored_facts
-                ],
+                [stored_fact.model_dump() for stored_fact in add_result.stored_facts],
                 add_result.extraction_context.model_dump(),
             )
 

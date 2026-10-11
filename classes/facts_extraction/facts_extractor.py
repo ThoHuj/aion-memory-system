@@ -6,6 +6,7 @@ from classes.facts_extraction.prompts import (
     FACTS_EXTRACTION_SYSTEM_PROMPT,
     format_facts_extraction_user_prompt,
 )
+from classes.facts_store import semantic_search_text_from_retrieved_facts
 from classes.open_router_client import OpenRouterClient
 
 
@@ -28,14 +29,13 @@ class _FactsExtractionPayload(BaseModel):
     )
 
 
-def build_facts_extraction_context(context_result: ContextResult) -> FactsExtractionContext:
+def build_facts_extraction_context(
+    context_result: ContextResult,
+) -> FactsExtractionContext:
     """Build the context sections sent to the facts extraction LLM."""
     lookup = context_result.context_lookup
-    related_facts = lookup.vector_search_result.facts
-    semantic_search = (
-        "\n".join(fact.content for fact in related_facts)
-        if related_facts
-        else "(none)"
+    semantic_search = semantic_search_text_from_retrieved_facts(
+        lookup.vector_search_result.facts,
     )
     recent_session_messages = FactsExtractor.messages_to_text(
         lookup.recent_session_messages,

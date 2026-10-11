@@ -22,12 +22,44 @@ class RetrievedVectorStoreFact(BaseModel):
     fact_id: str
     content: str
     fact_hash: str
+    stored_at: str = ""
 
 
 class VectorSearchResult(BaseModel):
     """Facts retrieved by semantic search in the vector store."""
 
     facts: list[RetrievedVectorStoreFact] = Field(default_factory=list)
+
+
+def order_retrieved_facts_by_recency(
+    vector_search_result: VectorSearchResult,
+) -> VectorSearchResult:
+    """Reorder semantically retrieved facts with the most recently stored first."""
+    return VectorSearchResult(
+        facts=sorted(
+            vector_search_result.facts,
+            key=lambda retrieved_fact: retrieved_fact.stored_at,
+            reverse=True,
+        )
+    )
+
+
+def format_retrieved_fact_line(retrieved_fact: RetrievedVectorStoreFact) -> str:
+    """Format one retrieved fact with its storage timestamp for LLM context."""
+    if retrieved_fact.stored_at:
+        return f"[{retrieved_fact.stored_at}] {retrieved_fact.content}"
+    return retrieved_fact.content
+
+
+def semantic_search_text_from_retrieved_facts(
+    retrieved_facts: list[RetrievedVectorStoreFact],
+) -> str:
+    """Build the semantic_search section for fact extraction prompts."""
+    if not retrieved_facts:
+        return "(none)"
+    return "\n".join(
+        format_retrieved_fact_line(retrieved_fact) for retrieved_fact in retrieved_facts
+    )
 
 
 class VectorStoreFactRecord(BaseModel):
@@ -37,6 +69,7 @@ class VectorStoreFactRecord(BaseModel):
     user_id: str = ""
     content: str
     fact_hash: str
+    stored_at: str = ""
     embedding: list[float] = Field(default_factory=list)
 
 
@@ -60,10 +93,10 @@ class EntityStoreDocument(BaseModel):
     entities: list[EntityRecord] = Field(default_factory=list)
 
 
-class FactHistoryRecord(BaseModel):
-    """Log entry for facts added from one extraction window."""
+class AddLogRecord(BaseModel):
+    """Log entry for the messages of one add call and the facts stored from them."""
 
-    history_id: str
+    add_id: str
     user_id: str
     session_id: str
     messages: list[dict[str, str]] = Field(default_factory=list)
@@ -71,22 +104,22 @@ class FactHistoryRecord(BaseModel):
     created_at: str
 
 
-class FactHistoryDocument(BaseModel):
-    """On-disk fact history payload."""
+class AddLogDocument(BaseModel):
+    """On-disk add log payload."""
 
-    entries: list[FactHistoryRecord] = Field(default_factory=list)
+    entries: list[AddLogRecord] = Field(default_factory=list)
 
 
 StoreDocument = TypeVar(
     "StoreDocument",
     VectorStoreDocument,
     EntityStoreDocument,
-    FactHistoryDocument,
+    AddLogDocument,
 )
 
 
 class FactsStore:
-    """Persists facts across vector, entity, and history backends (JSON v1)."""
+    """Persists facts across vector, entity, and add log backends (JSON v1)."""
 
     def __init__(
         self,
@@ -97,22 +130,21 @@ class FactsStore:
         self._data_directory = data_directory
         self._vector_store_path = data_directory / "vector_store.json"
         self._entity_store_path = data_directory / "entity_store.json"
-        self._history_store_path = data_directory / "history_store.json"
+        self._add_log_store_path = data_directory / "add_log_store.json"
 
     def store_new_facts(
         self,
         new_facts: NewFacts,
         context_result: ContextResult,
     ) -> None:
-        """Persist new facts to the vector store, entity store, and history log."""
-        if not new_facts.facts:
-            return
-        self.store_facts_in_vector_store(
-            new_facts,
-            user_id=context_result.metadata.user_id,
-        )
-        self.store_entities_for_facts(new_facts)
-        self.log_fact_history(new_facts, context_result)
+        """Persist new facts, then always log the add call's messages to the add log."""
+        if new_facts.facts:
+            self.store_facts_in_vector_store(
+                new_facts,
+                user_id=context_result.metadata.user_id,
+            )
+            self.store_entities_for_facts(new_facts)
+        self.log_add_call(new_facts, context_result)
 
     def store_facts_in_vector_store(
         self,
@@ -121,6 +153,7 @@ class FactsStore:
     ) -> None:
         """Append new facts to the vector store and set fact_id on each ExtractedFact."""
         document = self._read_vector_store_document()
+        stored_at = datetime.now(UTC).isoformat()
         for extracted_fact in new_facts.facts:
             fact_id = str(uuid.uuid4())
             extracted_fact.fact_id = fact_id
@@ -130,6 +163,7 @@ class FactsStore:
                     user_id=user_id,
                     content=extracted_fact.content,
                     fact_hash=extracted_fact.fact_hash,
+                    stored_at=stored_at,
                     embedding=list(extracted_fact.embedding),
                 )
             )
@@ -161,19 +195,17 @@ class FactsStore:
                     entity_record.fact_ids.append(extracted_fact.fact_id)
         self._write_entity_store_document(document)
 
-    def log_fact_history(
+    def log_add_call(
         self,
         new_facts: NewFacts,
         context_result: ContextResult,
     ) -> None:
-        """Append a history entry with the message window and stored fact ids."""
+        """Append an add log entry for one add call; fact_ids is empty if none stored."""
         fact_ids = [fact.fact_id for fact in new_facts.facts if fact.fact_id]
-        if not fact_ids:
-            return
-        document = self._read_history_document()
+        document = self._read_add_log_document()
         document.entries.append(
-            FactHistoryRecord(
-                history_id=str(uuid.uuid4()),
+            AddLogRecord(
+                add_id=str(uuid.uuid4()),
                 user_id=context_result.metadata.user_id,
                 session_id=context_result.metadata.session_id,
                 messages=list(context_result.messages),
@@ -181,7 +213,7 @@ class FactsStore:
                 created_at=datetime.now(UTC).isoformat(),
             )
         )
-        self._write_history_document(document)
+        self._write_add_log_document(document)
 
     def search_nearest_facts(
         self,
@@ -208,13 +240,10 @@ class FactsStore:
             scored_facts.append((similarity, stored_fact))
 
         scored_facts.sort(key=lambda item: item[0], reverse=True)
+        stored_at_by_fact_id = self._stored_at_by_fact_id_from_add_log()
         return VectorSearchResult(
             facts=[
-                RetrievedVectorStoreFact(
-                    fact_id=stored_fact.fact_id,
-                    content=stored_fact.content,
-                    fact_hash=stored_fact.fact_hash,
-                )
+                self._to_retrieved_fact(stored_fact, stored_at_by_fact_id)
                 for _, stored_fact in scored_facts[:limit]
             ]
         )
@@ -228,7 +257,7 @@ class FactsStore:
         if limit <= 0:
             return []
 
-        document = self._read_history_document()
+        document = self._read_add_log_document()
         session_entries = [
             entry for entry in document.entries if entry.session_id == session_id
         ]
@@ -242,6 +271,31 @@ class FactsStore:
                     return collected_messages[-limit:]
         return collected_messages
 
+    def _to_retrieved_fact(
+        self,
+        stored_fact: VectorStoreFactRecord,
+        stored_at_by_fact_id: dict[str, str],
+    ) -> RetrievedVectorStoreFact:
+        stored_at = stored_fact.stored_at.strip()
+        if not stored_at:
+            stored_at = stored_at_by_fact_id.get(stored_fact.fact_id, "")
+        return RetrievedVectorStoreFact(
+            fact_id=stored_fact.fact_id,
+            content=stored_fact.content,
+            fact_hash=stored_fact.fact_hash,
+            stored_at=stored_at,
+        )
+
+    def _stored_at_by_fact_id_from_add_log(self) -> dict[str, str]:
+        document = self._read_add_log_document()
+        stored_at_by_fact_id: dict[str, str] = {}
+        for entry in document.entries:
+            for fact_id in entry.fact_ids:
+                previous = stored_at_by_fact_id.get(fact_id)
+                if previous is None or entry.created_at > previous:
+                    stored_at_by_fact_id[fact_id] = entry.created_at
+        return stored_at_by_fact_id
+
     def _read_vector_store_document(self) -> VectorStoreDocument:
         return self._read_document(self._vector_store_path, VectorStoreDocument)
 
@@ -254,11 +308,11 @@ class FactsStore:
     def _write_entity_store_document(self, document: EntityStoreDocument) -> None:
         self._write_document(self._entity_store_path, document)
 
-    def _read_history_document(self) -> FactHistoryDocument:
-        return self._read_document(self._history_store_path, FactHistoryDocument)
+    def _read_add_log_document(self) -> AddLogDocument:
+        return self._read_document(self._add_log_store_path, AddLogDocument)
 
-    def _write_history_document(self, document: FactHistoryDocument) -> None:
-        self._write_document(self._history_store_path, document)
+    def _write_add_log_document(self, document: AddLogDocument) -> None:
+        self._write_document(self._add_log_store_path, document)
 
     def _read_document(
         self,

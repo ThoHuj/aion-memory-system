@@ -1,7 +1,11 @@
 from pydantic import BaseModel, Field
 
 from classes.embedding_manager import EmbeddingManager
-from classes.facts_store import FactsStore, VectorSearchResult
+from classes.facts_store import (
+    FactsStore,
+    VectorSearchResult,
+    order_retrieved_facts_by_recency,
+)
 
 
 class ContextMetadata(BaseModel):
@@ -67,10 +71,12 @@ class ContextManager:
         combined_messages_embedding = self._embed_parsed_messages_string(
             combined_messages
         )
-        vector_search_result = self._facts_store.search_nearest_facts(
-            user_id,
-            combined_messages,
-            self._nearest_facts_search_limit,
+        vector_search_result = order_retrieved_facts_by_recency(
+            self._facts_store.search_nearest_facts(
+                user_id,
+                combined_messages,
+                self._nearest_facts_search_limit,
+            )
         )
         recent_session_messages = self._facts_store.get_most_recent_session_messages(
             session_id,
