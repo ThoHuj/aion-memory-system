@@ -1,10 +1,31 @@
+from pydantic import BaseModel, Field
+
 from classes.conflict_resolver import ConflictResolver
 from classes.context_manager import ContextManager, ContextResult
 from classes.embedding_manager import EmbeddingManager
 from classes.entity_extraction import EntityExtractor
+from classes.facts_extraction.facts_extractor import (
+    FactsExtractionContext,
+    build_facts_extraction_context,
+)
 from classes.facts_extraction import FactsExtractor
 from classes.facts_extraction_result import NewFacts
 from classes.facts_store import FactsStore
+
+
+class StoredFactLogEntry(BaseModel):
+    """One fact persisted from a memory add, with entity extraction output."""
+
+    fact_id: str
+    content: str
+    entities: list[str] = Field(default_factory=list)
+
+
+class MemoryAddResult(BaseModel):
+    """Outcome of one memory add, including facts extraction inputs."""
+
+    stored_facts: list[StoredFactLogEntry] = Field(default_factory=list)
+    extraction_context: FactsExtractionContext
 
 
 class MemorySystem:
@@ -31,19 +52,31 @@ class MemorySystem:
         messages: list[dict[str, str]],
         user_id: str,
         session_id: str,
-    ) -> None:
-        """Extract memories and persist them."""
+    ) -> MemoryAddResult:
+        """Extract memories, persist them, and return stored facts plus extraction context."""
         context_result: ContextResult = self._context_manager.produce_context_result(
             messages,
             user_id,
             session_id,
         )
+        extraction_context = build_facts_extraction_context(context_result)
         extracted_fact_strings = self._facts_extractor.extract_facts(context_result)
         new_facts: NewFacts = NewFacts.from_fact_strings(extracted_fact_strings)
         self._conflict_resolver.remove_duplicated_facts(new_facts, context_result)
         self._embedding_manager.attach_embeddings(new_facts)
         self._entity_extractor.attach_entities(new_facts)
         self._facts_store.store_new_facts(new_facts, context_result)
+        return MemoryAddResult(
+            stored_facts=[
+                StoredFactLogEntry(
+                    fact_id=extracted_fact.fact_id,
+                    content=extracted_fact.content,
+                    entities=list(extracted_fact.entities),
+                )
+                for extracted_fact in new_facts.facts
+            ],
+            extraction_context=extraction_context,
+        )
 
     # def update(self, memory_id: str, content: str) -> None:
     #     """Update a memory."""

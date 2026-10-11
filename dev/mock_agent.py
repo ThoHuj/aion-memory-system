@@ -3,6 +3,7 @@ import uuid
 from classes.facts_store import FactsStore, VectorSearchResult
 from classes.memory_system import MemorySystem
 from classes.open_router_client import OpenRouterClient
+from dev.session_logger import SessionLogger
 
 _CHAT_RELEVANT_FACTS_LIMIT = 10
 
@@ -17,12 +18,14 @@ class MockAgent:
         facts_store: FactsStore,
         user_id: str = "Tjorven",
         session_id: str | None = None,
+        session_logger: SessionLogger | None = None,
     ) -> None:
         self._open_router_client = open_router_client
         self._memory_system = memory_system
         self._facts_store = facts_store
         self._user_id = user_id
         self._session_id = session_id or str(uuid.uuid4())
+        self._session_logger = session_logger
         self._messages: list[dict[str, str]] = []
 
     def import_conversation_history(self, messages: list[dict[str, str]]) -> None:
@@ -31,6 +34,8 @@ class MockAgent:
             {"role": message["role"], "content": message["content"]}
             for message in messages
         ]
+        if self._session_logger is not None:
+            self._session_logger.log_conversation(self._messages)
         for index, message in enumerate(self._messages):
             if message["role"] != "assistant":
                 continue
@@ -45,6 +50,11 @@ class MockAgent:
             user_input,
             _CHAT_RELEVANT_FACTS_LIMIT,
         )
+        if self._session_logger is not None:
+            self._session_logger.log_retrieved_facts_for_chat(
+                user_input,
+                [fact.content for fact in vector_search_result.facts],
+            )
         relevant_facts_message = self._build_relevant_user_facts_message(
             vector_search_result
         )
@@ -58,8 +68,13 @@ class MockAgent:
         except RuntimeError:
             raise
 
+        if self._session_logger is not None:
+            self._session_logger.log_chat_completion(messages_for_completion, response)
+
         self._messages.append({"role": "user", "content": user_input})
         self._messages.append({"role": "assistant", "content": response})
+        if self._session_logger is not None:
+            self._session_logger.log_conversation(self._messages)
         self._add_turn_to_memory(
             [
                 {"role": "user", "content": user_input},
@@ -87,11 +102,20 @@ class MockAgent:
 
     def _add_turn_to_memory(self, turn_messages: list[dict[str, str]]) -> None:
         """Run the memory add pipeline for one user/assistant turn."""
-        self._memory_system.add(
+        add_result = self._memory_system.add(
             turn_messages,
             user_id=self._user_id,
             session_id=self._session_id,
         )
+        if self._session_logger is not None:
+            self._session_logger.log_memory_add(
+                turn_messages,
+                [
+                    stored_fact.model_dump()
+                    for stored_fact in add_result.stored_facts
+                ],
+                add_result.extraction_context.model_dump(),
+            )
 
     def _turn_messages(self, assistant_index: int) -> list[dict[str, str]]:
         """Return the user and assistant messages for the turn ending at assistant_index."""
