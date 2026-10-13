@@ -7,8 +7,13 @@ GET_FACT_SOURCES_DEFINITION: dict[str, object] = {
     "function": {
         "name": "get_fact_sources",
         "description": (
-            "Get the source messages that one or more remembered facts were "
-            "extracted from. Use the fact ids shown in <relevant_user_facts>. "
+            "Get the original conversation messages that one or more remembered "
+            "facts were extracted from, including when and in what context the "
+            "user said it. Call this whenever the user asks for details, "
+            "context, timing, origin, or proof about something you remember, "
+            "or asks how or when you know something. Remembered facts are only "
+            "short summaries; the source messages are the only way to give "
+            "accurate details. Use the fact ids shown in <relevant_user_facts>. "
             "Always use the complete id exactly as shown (full UUID). Never "
             "shorten, abbreviate, or truncate ids, neither in tool calls nor "
             "in replies to the user."

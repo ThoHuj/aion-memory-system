@@ -10,6 +10,17 @@ from dev.session_logger import SessionLogger
 
 _CHAT_RELEVANT_FACTS_LIMIT = 10
 _MAX_TOOL_ROUNDS = 5
+_SYSTEM_PROMPT = """\
+You are an assistant with long-term memory of the user. Facts you remember about \
+the user appear in <relevant_user_facts>. These are short summaries, not the \
+original words.
+
+When the user asks for details, context, timing, or origin of something you \
+remember, or asks how or when you know something, do not answer from the \
+summaries alone. First call the get_fact_sources tool with the ids of the \
+relevant facts. Then answer using the source messages, and quote or present the \
+relevant source messages to the user. If the tool returns no sources, say so \
+instead of guessing."""
 
 
 class MockAgent:
@@ -72,6 +83,7 @@ class MockAgent:
             retrieved_facts
         )
         messages_for_completion = [
+            {"role": "system", "content": _SYSTEM_PROMPT},
             *self._messages,
             relevant_facts_message,
             {"role": "user", "content": user_input},
@@ -83,6 +95,7 @@ class MockAgent:
         if self._session_logger is not None:
             self._session_logger.log_chat_completion(messages_for_completion, response)
 
+        self._messages.append(relevant_facts_message)
         self._messages.append({"role": "user", "content": user_input})
         self._messages.extend(tool_exchange_messages)
         self._messages.append({"role": "assistant", "content": response})
