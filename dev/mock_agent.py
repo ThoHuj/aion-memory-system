@@ -1,4 +1,7 @@
+import json
 import uuid
+from collections.abc import Callable
+from functools import partial
 
 from classes.facts_store import (
     FactsStore,
@@ -8,9 +11,11 @@ from classes.facts_store import (
 )
 from classes.memory_system import MemorySystem
 from classes.open_router_client import OpenRouterClient
+from dev.agent_tools import GET_FACT_SOURCES_DEFINITION, get_fact_sources
 from dev.session_logger import SessionLogger
 
 _CHAT_RELEVANT_FACTS_LIMIT = 10
+_MAX_TOOL_ROUNDS = 5
 
 
 class MockAgent:
@@ -31,7 +36,11 @@ class MockAgent:
         self._user_id = user_id
         self._session_id = session_id or str(uuid.uuid4())
         self._session_logger = session_logger
-        self._messages: list[dict[str, str]] = []
+        self._messages: list[dict[str, object]] = []
+        self._tool_definitions: list[dict[str, object]] = [GET_FACT_SOURCES_DEFINITION]
+        self._tool_functions: dict[str, Callable[..., str]] = {
+            "get_fact_sources": partial(get_fact_sources, memory_system),
+        }
 
     def import_conversation_history(self, messages: list[dict[str, str]]) -> None:
         """Replace the active conversation and run memory add for each assistant turn."""
@@ -73,15 +82,15 @@ class MockAgent:
             relevant_facts_message,
             {"role": "user", "content": user_input},
         ]
-        try:
-            response = self._open_router_client.complete(messages_for_completion)
-        except RuntimeError:
-            raise
+        response, tool_exchange_messages = self._complete_with_tools(
+            messages_for_completion
+        )
 
         if self._session_logger is not None:
             self._session_logger.log_chat_completion(messages_for_completion, response)
 
         self._messages.append({"role": "user", "content": user_input})
+        self._messages.extend(tool_exchange_messages)
         self._messages.append({"role": "assistant", "content": response})
         if self._session_logger is not None:
             self._session_logger.log_conversation(self._messages)
@@ -93,6 +102,49 @@ class MockAgent:
         )
         return response
 
+    def _complete_with_tools(
+        self, messages: list[dict[str, str]]
+    ) -> tuple[str, list[dict[str, object]]]:
+        """Run the model, executing requested tool calls until it returns text.
+
+        Returns the final text and the assistant tool-call and tool result messages
+        produced along the way, in order.
+        """
+        working_messages: list[dict[str, object]] = [*messages]
+        tool_exchange_messages: list[dict[str, object]] = []
+        for _ in range(_MAX_TOOL_ROUNDS):
+            assistant_message = self._open_router_client.complete_with_tools(
+                working_messages,
+                self._tool_definitions,
+            )
+            tool_calls = assistant_message.get("tool_calls")
+            if not tool_calls:
+                return assistant_message.get("content") or "", tool_exchange_messages
+            new_messages: list[dict[str, object]] = [assistant_message]
+            for tool_call in tool_calls:
+                new_messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": tool_call["id"],
+                        "content": self._run_tool_call(tool_call),
+                    }
+                )
+            working_messages.extend(new_messages)
+            tool_exchange_messages.extend(new_messages)
+        raise RuntimeError(f"Tool loop exceeded {_MAX_TOOL_ROUNDS} rounds")
+
+    def _run_tool_call(self, tool_call: dict[str, object]) -> str:
+        """Execute one tool call and return its result (or an error) as text."""
+        function = tool_call["function"]
+        tool_function = self._tool_functions.get(function["name"])
+        if tool_function is None:
+            return json.dumps({"error": f"unknown tool: {function['name']}"})
+        try:
+            arguments = json.loads(function["arguments"] or "{}")
+            return tool_function(**arguments)
+        except (json.JSONDecodeError, TypeError) as error:
+            return json.dumps({"error": f"invalid tool arguments: {error}"})
+
     @staticmethod
     def _build_relevant_user_facts_message(
         vector_search_result: VectorSearchResult,
@@ -100,7 +152,8 @@ class MockAgent:
         """Build a separate chat message with semantically retrieved user facts."""
         if vector_search_result.facts:
             fact_lines = "\n".join(
-                f"- {format_retrieved_fact_line(retrieved_fact)}"
+                f"- [id: {retrieved_fact.fact_id}] "
+                f"{format_retrieved_fact_line(retrieved_fact)}"
                 for retrieved_fact in vector_search_result.facts
             )
         else:

@@ -28,6 +28,27 @@ class MemoryAddResult(BaseModel):
     extraction_context: FactsExtractionContext
 
 
+class FactSource(BaseModel):
+    """The add call (and its messages) a fact was extracted from."""
+
+    add_id: str
+    session_id: str
+    created_at: str
+    messages: list[dict[str, str]] = Field(default_factory=list)
+
+
+class FactData(BaseModel):
+    """All stored data related to one fact."""
+
+    fact_id: str
+    user_id: str
+    content: str
+    fact_hash: str
+    stored_at: str
+    entities: list[str] = Field(default_factory=list)
+    source: FactSource | None = None
+
+
 class MemorySystem:
     """A high-level interface for extracting, storing, and retrieving agent memories."""
 
@@ -84,5 +105,27 @@ class MemorySystem:
     # def delete(self, memory_id: str) -> None:
     #     """Delete a memory."""
 
-    # def get(self, query: str) -> list[str]:
-    #     """Search memories."""
+    def get(self, fact_id: str) -> FactData:
+        """Return all stored data for fact_id. Raises KeyError if the fact is unknown."""
+        records = self._facts_store.get_fact_records(fact_id)
+        source: FactSource | None = None
+        add_log_entry = records.add_log_entry
+        if add_log_entry is not None:
+            source = FactSource(
+                add_id=add_log_entry.add_id,
+                session_id=add_log_entry.session_id,
+                created_at=add_log_entry.created_at,
+                messages=list(add_log_entry.messages),
+            )
+        stored_at = records.fact.stored_at
+        if not stored_at and add_log_entry is not None:
+            stored_at = add_log_entry.created_at
+        return FactData(
+            fact_id=records.fact.fact_id,
+            user_id=records.fact.user_id,
+            content=records.fact.content,
+            fact_hash=records.fact.fact_hash,
+            stored_at=stored_at,
+            entities=records.entity_names,
+            source=source,
+        )

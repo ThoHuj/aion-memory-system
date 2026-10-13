@@ -110,6 +110,14 @@ class AddLogDocument(BaseModel):
     entries: list[AddLogRecord] = Field(default_factory=list)
 
 
+class FactStoreRecords(BaseModel):
+    """All stored records related to one fact id."""
+
+    fact: VectorStoreFactRecord
+    entity_names: list[str] = Field(default_factory=list)
+    add_log_entry: AddLogRecord | None = None
+
+
 StoreDocument = TypeVar(
     "StoreDocument",
     VectorStoreDocument,
@@ -246,6 +254,37 @@ class FactsStore:
                 self._to_retrieved_fact(stored_fact, stored_at_by_fact_id)
                 for _, stored_fact in scored_facts[:limit]
             ]
+        )
+
+    def get_fact_records(self, fact_id: str) -> FactStoreRecords:
+        """Return the fact, linked entity names, and source add log entry for fact_id.
+
+        Raises KeyError if no fact with fact_id is stored.
+        """
+        vector_document = self._read_vector_store_document()
+        fact_record = next(
+            (fact for fact in vector_document.facts if fact.fact_id == fact_id),
+            None,
+        )
+        if fact_record is None:
+            raise KeyError(fact_id)
+
+        entity_document = self._read_entity_store_document()
+        entity_names = [
+            entity.name
+            for entity in entity_document.entities
+            if fact_id in entity.fact_ids
+        ]
+
+        add_log_document = self._read_add_log_document()
+        add_log_entry = next(
+            (entry for entry in add_log_document.entries if fact_id in entry.fact_ids),
+            None,
+        )
+        return FactStoreRecords(
+            fact=fact_record,
+            entity_names=entity_names,
+            add_log_entry=add_log_entry,
         )
 
     def get_most_recent_session_messages(
