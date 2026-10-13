@@ -42,7 +42,7 @@ def create_memory_system(
     api_key: str,
     extraction_model: str,
     embedding_model: str,
-) -> tuple[MemorySystem, FactsStore]:
+) -> MemorySystem:
     """Wire OpenRouter clients and memory components into a ready-to-use MemorySystem."""
     extraction_client = OpenRouterClient(api_key=api_key, model=extraction_model)
     embedding_client = OpenRouterClient(api_key=api_key, model=embedding_model)
@@ -63,12 +63,12 @@ def create_memory_system(
         conflict_resolver=conflict_resolver,
         entity_extractor=entity_extractor,
     )
-    return memory_system, facts_store
+    return memory_system
 
 
 def main() -> None:
     api_key, chat_model, extraction_model, embedding_model = load_openrouter_config()
-    memory_system, facts_store = create_memory_system(
+    memory_system = create_memory_system(
         api_key,
         extraction_model,
         embedding_model,
@@ -79,7 +79,6 @@ def main() -> None:
     mock_agent = MockAgent(
         open_router_client=open_router_client,
         memory_system=memory_system,
-        facts_store=facts_store,
         session_id=session_id,
         session_logger=session_logger,
     )

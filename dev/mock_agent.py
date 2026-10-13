@@ -3,13 +3,7 @@ import uuid
 from collections.abc import Callable
 from functools import partial
 
-from classes.facts_store import (
-    FactsStore,
-    VectorSearchResult,
-    format_retrieved_fact_line,
-    order_retrieved_facts_by_recency,
-)
-from classes.memory_system import MemorySystem
+from classes.memory_system import FactData, MemorySystem
 from classes.open_router_client import OpenRouterClient
 from dev.agent_tools import GET_FACT_SOURCES_DEFINITION, get_fact_sources
 from dev.session_logger import SessionLogger
@@ -25,14 +19,12 @@ class MockAgent:
         self,
         open_router_client: OpenRouterClient,
         memory_system: MemorySystem,
-        facts_store: FactsStore,
         user_id: str = "Tjorven",
         session_id: str | None = None,
         session_logger: SessionLogger | None = None,
     ) -> None:
         self._open_router_client = open_router_client
         self._memory_system = memory_system
-        self._facts_store = facts_store
         self._user_id = user_id
         self._session_id = session_id or str(uuid.uuid4())
         self._session_logger = session_logger
@@ -59,23 +51,25 @@ class MockAgent:
 
     def handle_user_input(self, user_input: str) -> str:
         """Send user input to the model and store the latest turn in memory."""
-        vector_search_result = order_retrieved_facts_by_recency(
-            self._facts_store.search_nearest_facts(
-                self._user_id,
+        retrieved_facts = sorted(
+            self._memory_system.retrieve(
                 user_input,
+                self._user_id,
                 _CHAT_RELEVANT_FACTS_LIMIT,
-            )
+            ).retrieved_facts,
+            key=lambda retrieved_fact: retrieved_fact.stored_at,
+            reverse=True,
         )
         if self._session_logger is not None:
             self._session_logger.log_retrieved_facts_for_chat(
                 user_input,
                 [
-                    format_retrieved_fact_line(retrieved_fact)
-                    for retrieved_fact in vector_search_result.facts
+                    self._format_fact_line(retrieved_fact)
+                    for retrieved_fact in retrieved_facts
                 ],
             )
         relevant_facts_message = self._build_relevant_user_facts_message(
-            vector_search_result
+            retrieved_facts
         )
         messages_for_completion = [
             *self._messages,
@@ -146,15 +140,22 @@ class MockAgent:
             return json.dumps({"error": f"invalid tool arguments: {error}"})
 
     @staticmethod
+    def _format_fact_line(retrieved_fact: FactData) -> str:
+        """Format one retrieved fact with its storage timestamp for LLM context."""
+        if retrieved_fact.stored_at:
+            return f"[{retrieved_fact.stored_at}] {retrieved_fact.content}"
+        return retrieved_fact.content
+
+    @staticmethod
     def _build_relevant_user_facts_message(
-        vector_search_result: VectorSearchResult,
+        retrieved_facts: list[FactData],
     ) -> dict[str, str]:
-        """Build a separate chat message with semantically retrieved user facts."""
-        if vector_search_result.facts:
+        """Build a separate chat message with retrieved user facts."""
+        if retrieved_facts:
             fact_lines = "\n".join(
                 f"- [id: {retrieved_fact.fact_id}] "
-                f"{format_retrieved_fact_line(retrieved_fact)}"
-                for retrieved_fact in vector_search_result.facts
+                f"{MockAgent._format_fact_line(retrieved_fact)}"
+                for retrieved_fact in retrieved_facts
             )
         else:
             fact_lines = "(none)"

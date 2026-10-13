@@ -49,6 +49,12 @@ class FactData(BaseModel):
     source: FactSource | None = None
 
 
+class RetrievalResult(BaseModel):
+    """Outcome of one memory retrieval."""
+
+    retrieved_facts: list[FactData] = Field(default_factory=list)
+
+
 class MemorySystem:
     """A high-level interface for extracting, storing, and retrieving agent memories."""
 
@@ -104,6 +110,19 @@ class MemorySystem:
 
     # def delete(self, memory_id: str) -> None:
     #     """Delete a memory."""
+
+    def retrieve(
+        self,
+        query: str,
+        user_id: str,
+        limit: int,
+    ) -> RetrievalResult:
+        """Return up to limit stored facts for user_id that best match query."""
+        search_result = self._facts_store.search_nearest_facts(user_id, query, limit)
+        # TODO: self.get() re-reads the vector store for every retrieved fact.
+        return RetrievalResult(
+            retrieved_facts=[self.get(fact.fact_id) for fact in search_result.facts]
+        )
 
     def get(self, fact_id: str) -> FactData:
         """Return all stored data for fact_id. Raises KeyError if the fact is unknown."""
