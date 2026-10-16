@@ -21,7 +21,10 @@ remember, or asks how or when you know something, do not answer from the \
 summaries alone. First call the get_fact_sources tool with the ids of the \
 relevant facts. Then answer using the source messages, and quote or present the \
 relevant source messages to the user. If the tool returns no sources, say so \
-instead of guessing."""
+instead of guessing.
+
+Always greet the user with their name at the beginning of a conversation if you \
+have a name retrieved in your memory."""
 
 
 class MockAgent:
