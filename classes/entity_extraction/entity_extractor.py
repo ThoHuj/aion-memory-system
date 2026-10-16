@@ -1,50 +1,86 @@
 from pydantic import BaseModel, Field
 
+from classes.context_manager import ContextResult
 from classes.entity_extraction.prompts import (
     ENTITY_EXTRACTION_ENTITIES_FIELD_DESCRIPTION,
-    ENTITY_EXTRACTION_SYSTEM_PROMPT,
+    ENTITY_EXTRACTION_ENTITY_FIELD_DESCRIPTION,
+    ENTITY_EXTRACTION_ENTITY_TYPE_FIELD_DESCRIPTION,
+    format_entity_extraction_system_prompt,
     format_entity_extraction_user_prompt,
 )
-from classes.facts_extraction_result import NewFacts
+from classes.graph_models import ExtractedEntity, GraphUpdate, normalize_graph_name
 from classes.open_router_client import OpenRouterClient
+
+
+class _EntityItem(BaseModel):
+    """One entity with its type."""
+
+    entity: str = Field(description=ENTITY_EXTRACTION_ENTITY_FIELD_DESCRIPTION)
+    entity_type: str = Field(description=ENTITY_EXTRACTION_ENTITY_TYPE_FIELD_DESCRIPTION)
 
 
 class _EntityExtractionPayload(BaseModel):
     """Structured LLM output for entity extraction."""
 
-    entities: list[str] = Field(
+    entities: list[_EntityItem] = Field(
         default_factory=list,
         description=ENTITY_EXTRACTION_ENTITIES_FIELD_DESCRIPTION,
     )
 
 
 class EntityExtractor:
-    """Extract entities from facts via an LLM."""
+    """Extract typed entities from text via an LLM (Mem0 call 1)."""
 
     def __init__(self, extraction_client: OpenRouterClient) -> None:
         self._extraction_client = extraction_client
 
-    def attach_entities(self, new_facts: NewFacts) -> None:
-        """Extract entities for each fact and store them on extracted_fact.entities."""
-        for extracted_fact in new_facts.facts:
-            extraction_messages = self._build_entity_extraction_messages(
-                extracted_fact.content,
-            )
-            payload = self._extraction_client.complete_structured(
-                extraction_messages,
-                _EntityExtractionPayload,
-            )
-            extracted_fact.entities = [
-                entity.strip() for entity in payload.entities if entity.strip()
-            ]
-
-    def _build_entity_extraction_messages(
+    def extract_entities(
         self,
-        fact: str,
-    ) -> list[dict[str, str]]:
-        """Build system and user messages for entity extraction on one fact."""
-        user_content = format_entity_extraction_user_prompt(fact)
-        return [
-            {"role": "system", "content": ENTITY_EXTRACTION_SYSTEM_PROMPT},
-            {"role": "user", "content": user_content},
+        text: str,
+        user_id: str,
+        recent_session_messages: str = "(none)",
+    ) -> list[ExtractedEntity]:
+        """Return normalized, unique entities extracted from the text."""
+        extraction_messages = [
+            {
+                "role": "system",
+                "content": format_entity_extraction_system_prompt(user_id),
+            },
+            {
+                "role": "user",
+                "content": format_entity_extraction_user_prompt(
+                    text,
+                    recent_session_messages,
+                ),
+            },
         ]
+        payload = self._extraction_client.complete_structured(
+            extraction_messages,
+            _EntityExtractionPayload,
+        )
+        entities: list[ExtractedEntity] = []
+        seen_names: set[str] = set()
+        for item in payload.entities:
+            name = normalize_graph_name(item.entity)
+            if not name or name in seen_names:
+                continue
+            seen_names.add(name)
+            entities.append(
+                ExtractedEntity(
+                    name=name,
+                    entity_type=normalize_graph_name(item.entity_type),
+                )
+            )
+        return entities
+
+    def attach_entities(
+        self,
+        graph_update: GraphUpdate,
+        context_result: ContextResult,
+    ) -> None:
+        """Extract entities from the new messages onto the graph update."""
+        graph_update.entities = self.extract_entities(
+            context_result.new_messages_text,
+            context_result.metadata.user_id,
+            context_result.recent_session_messages_text,
+        )

@@ -1,4 +1,4 @@
-from classes.facts_extraction_result import NewFacts
+from classes.graph_models import GraphUpdate
 from classes.open_router_client import OpenRouterClient
 
 
@@ -23,16 +23,16 @@ class EmbeddingManager:
 
     def attach_embeddings(
         self,
-        new_facts: NewFacts,
+        graph_update: GraphUpdate,
     ) -> None:
-        """Batch-embed each extracted fact's content onto the pipeline result."""
-        fact_contents = [fact.content for fact in new_facts.facts]
-        embeddings = self.embed_strings(fact_contents)
-        if len(embeddings) != len(new_facts.facts):
-            raise RuntimeError("Embedding count does not match extracted fact count.")
-        for extracted_fact, embedding in zip(
-            new_facts.facts,
+        """Batch-embed each entity name onto entity.embedding."""
+        entity_names = [entity.name for entity in graph_update.entities]
+        embeddings = self.embed_strings(entity_names)
+        if len(embeddings) != len(graph_update.entities):
+            raise RuntimeError("Embedding count does not match extracted entity count.")
+        for entity, embedding in zip(
+            graph_update.entities,
             embeddings,
             strict=True,
         ):
-            extracted_fact.embedding = embedding
+            entity.embedding = embedding

@@ -3,17 +3,18 @@ import uuid
 from collections.abc import Callable
 from functools import partial
 
+from classes.graph_models import format_fact_line
 from classes.memory_system import FactData, MemorySystem
 from classes.open_router_client import OpenRouterClient
 from dev.agent_tools import GET_FACT_SOURCES_DEFINITION, get_fact_sources
 from dev.session_logger import SessionLogger
 
-_CHAT_RELEVANT_FACTS_LIMIT = 10
+_CHAT_RELEVANT_FACTS_LIMIT = 20
 _MAX_TOOL_ROUNDS = 5
 _SYSTEM_PROMPT = """\
 You are an assistant with long-term memory of the user. Facts you remember about \
-the user appear in <relevant_user_facts>. These are short summaries, not the \
-original words.
+the user appear in <relevant_user_facts>. Each is a relation of the form \
+source -- relation -- destination, not the original words.
 
 When the user asks for details, context, timing, or origin of something you \
 remember, or asks how or when you know something, do not answer from the \
@@ -30,7 +31,7 @@ class MockAgent:
         self,
         open_router_client: OpenRouterClient,
         memory_system: MemorySystem,
-        user_id: str = "Tjorven",
+        user_id: str = "user_01",
         session_id: str | None = None,
         session_logger: SessionLogger | None = None,
     ) -> None:
@@ -68,7 +69,7 @@ class MockAgent:
                 self._user_id,
                 _CHAT_RELEVANT_FACTS_LIMIT,
             ).retrieved_facts,
-            key=lambda retrieved_fact: retrieved_fact.stored_at,
+            key=lambda retrieved_fact: retrieved_fact.fact.valid_from,
             reverse=True,
         )
         if self._session_logger is not None:
@@ -154,10 +155,12 @@ class MockAgent:
 
     @staticmethod
     def _format_fact_line(retrieved_fact: FactData) -> str:
-        """Format one retrieved fact with its storage timestamp for LLM context."""
-        if retrieved_fact.stored_at:
-            return f"[{retrieved_fact.stored_at}] {retrieved_fact.content}"
-        return retrieved_fact.content
+        """Format one retrieved fact with its world-time validity for LLM context."""
+        fact = retrieved_fact.fact
+        line = f"[{fact.world_valid_from}] {format_fact_line(fact)}"
+        if fact.world_valid_to:
+            line += f" (until {fact.world_valid_to})"
+        return line
 
     @staticmethod
     def _build_relevant_user_facts_message(
@@ -166,7 +169,7 @@ class MockAgent:
         """Build a separate chat message with retrieved user facts."""
         if retrieved_facts:
             fact_lines = "\n".join(
-                f"- [id: {retrieved_fact.fact_id}] "
+                f"- [id: {retrieved_fact.fact.fact_id}] "
                 f"{MockAgent._format_fact_line(retrieved_fact)}"
                 for retrieved_fact in retrieved_facts
             )
@@ -187,8 +190,7 @@ class MockAgent:
         if self._session_logger is not None:
             self._session_logger.log_memory_add(
                 turn_messages,
-                [stored_fact.model_dump() for stored_fact in add_result.stored_facts],
-                add_result.extraction_context.model_dump(),
+                add_result.model_dump(),
             )
 
     def _turn_messages(self, assistant_index: int) -> list[dict[str, str]]:

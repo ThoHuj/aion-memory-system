@@ -38,7 +38,7 @@ class SessionLogger:
         user_input: str,
         retrieved_fact_contents: list[str],
     ) -> None:
-        """Log vector-retrieved facts injected before the chat completion."""
+        """Log graph-retrieved facts injected before the chat completion."""
         self._append(
             {
                 "event": "retrieved_facts_for_chat",
@@ -73,19 +73,14 @@ class SessionLogger:
     def log_memory_add(
         self,
         turn_messages: list[dict[str, str]],
-        stored_facts: list[dict[str, object]],
-        facts_extraction: dict[str, object],
+        add_result: dict[str, object],
     ) -> None:
-        """Log a memory add turn, extraction inputs, and stored facts after dedupe."""
+        """Log a memory add turn and its result (entities, stored facts, invalidations)."""
         self._append(
             {
                 "event": "memory_add",
                 "turn_messages": turn_messages,
-                "facts_extraction": facts_extraction,
-                "stored_facts": stored_facts,
-                "extracted_facts": [
-                    str(stored_fact["content"]) for stored_fact in stored_facts
-                ],
+                "add_result": add_result,
             }
         )
 

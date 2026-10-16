@@ -1,5 +1,6 @@
 import json
 
+from classes.graph_models import format_fact_line
 from classes.memory_system import MemorySystem
 
 GET_FACT_SOURCES_DEFINITION: dict[str, object] = {
@@ -47,14 +48,11 @@ def get_fact_sources(memory_system: MemorySystem, fact_ids: list[str]) -> str:
         except KeyError:
             results.append({"fact_id": fact_id, "error": "fact not found"})
             continue
-        source_messages = (
-            fact_data.source.messages if fact_data.source is not None else []
-        )
         results.append(
             {
                 "fact_id": fact_id,
-                "fact": fact_data.content,
-                "source_messages": source_messages,
+                "fact": format_fact_line(fact_data.fact),
+                "source_messages": fact_data.origin.messages,
             }
         )
     return json.dumps(results, ensure_ascii=False)

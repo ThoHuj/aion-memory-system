@@ -1,52 +1,36 @@
 from pydantic import BaseModel, Field
 
-from classes.conflict_resolver import ConflictResolver
+from classes.conflict_resolution.conflict_resolver import ConflictResolver
 from classes.context_manager import ContextManager, ContextResult
 from classes.embedding_manager import EmbeddingManager
 from classes.entity_extraction import EntityExtractor
-from classes.facts_extraction import FactsExtractor
-from classes.facts_extraction.facts_extractor import (
-    FactsExtractionContext,
-    build_facts_extraction_context,
-)
-from classes.facts_extraction_result import NewFacts
+from classes.entity_resolution.entity_resolver import EntityResolver
 from classes.facts_store import FactsStore
-
-
-class StoredFactLogEntry(BaseModel):
-    """One fact persisted from a memory add, with entity extraction output."""
-
-    fact_id: str
-    content: str
-    entities: list[str] = Field(default_factory=list)
-
-
-class MemoryAddResult(BaseModel):
-    """Outcome of one memory add, including facts extraction inputs."""
-
-    stored_facts: list[StoredFactLogEntry] = Field(default_factory=list)
-    extraction_context: FactsExtractionContext
-
-
-class FactSource(BaseModel):
-    """The add call (and its messages) a fact was extracted from."""
-
-    add_id: str
-    session_id: str
-    created_at: str
-    messages: list[dict[str, str]] = Field(default_factory=list)
+from classes.graph_models import (
+    AddLogRecord,
+    ExtractedEntity,
+    ExtractedFact,
+    FactInvalidation,
+    GraphUpdate,
+    StoredFact,
+)
+from classes.graph_retriever import GraphRetriever
+from classes.relation_extraction.relation_extractor import RelationExtractor
 
 
 class FactData(BaseModel):
-    """All stored data related to one fact."""
+    """A stored fact together with the add call it originated from."""
 
-    fact_id: str
-    user_id: str
-    content: str
-    fact_hash: str
-    stored_at: str
-    entities: list[str] = Field(default_factory=list)
-    source: FactSource | None = None
+    fact: StoredFact
+    origin: AddLogRecord
+
+
+class MemoryAddResult(BaseModel):
+    """Outcome of one memory add."""
+
+    entities: list[ExtractedEntity] = Field(default_factory=list)
+    stored_facts: list[ExtractedFact] = Field(default_factory=list)
+    invalidations: list[FactInvalidation] = Field(default_factory=list)
 
 
 class RetrievalResult(BaseModel):
@@ -61,18 +45,22 @@ class MemorySystem:
     def __init__(
         self,
         facts_store: FactsStore,
-        facts_extractor: FactsExtractor,
         context_manager: ContextManager,
-        embedding_manager: EmbeddingManager,
-        conflict_resolver: ConflictResolver,
         entity_extractor: EntityExtractor,
+        relation_extractor: RelationExtractor,
+        embedding_manager: EmbeddingManager,
+        entity_resolver: EntityResolver,
+        conflict_resolver: ConflictResolver,
+        graph_retriever: GraphRetriever,
     ) -> None:
         self._facts_store = facts_store
-        self._facts_extractor = facts_extractor
         self._context_manager = context_manager
-        self._embedding_manager = embedding_manager
-        self._conflict_resolver = conflict_resolver
         self._entity_extractor = entity_extractor
+        self._relation_extractor = relation_extractor
+        self._embedding_manager = embedding_manager
+        self._entity_resolver = entity_resolver
+        self._conflict_resolver = conflict_resolver
+        self._graph_retriever = graph_retriever
 
     def add(
         self,
@@ -80,29 +68,23 @@ class MemorySystem:
         user_id: str,
         session_id: str,
     ) -> MemoryAddResult:
-        """Extract memories, persist them, and return stored facts plus extraction context."""
+        """Extract entities and facts from messages, persist them, and return the outcome."""
         context_result: ContextResult = self._context_manager.produce_context_result(
             messages,
             user_id,
             session_id,
         )
-        extraction_context = build_facts_extraction_context(context_result)
-        extracted_fact_strings = self._facts_extractor.extract_facts(context_result)
-        new_facts: NewFacts = NewFacts.from_fact_strings(extracted_fact_strings)
-        self._conflict_resolver.remove_duplicated_facts(new_facts, context_result)
-        self._embedding_manager.attach_embeddings(new_facts)
-        self._entity_extractor.attach_entities(new_facts)
-        self._facts_store.store_new_facts(new_facts, context_result)
+        graph_update = GraphUpdate()
+        self._entity_extractor.attach_entities(graph_update, context_result)
+        self._relation_extractor.attach_facts(graph_update, context_result)
+        self._embedding_manager.attach_embeddings(graph_update)
+        self._entity_resolver.resolve_entities(graph_update, context_result)
+        self._conflict_resolver.resolve_conflicts(graph_update, context_result)
+        self._facts_store.store_graph_update(graph_update, context_result)
         return MemoryAddResult(
-            stored_facts=[
-                StoredFactLogEntry(
-                    fact_id=extracted_fact.fact_id,
-                    content=extracted_fact.content,
-                    entities=list(extracted_fact.entities),
-                )
-                for extracted_fact in new_facts.facts
-            ],
-            extraction_context=extraction_context,
+            entities=graph_update.entities,
+            stored_facts=graph_update.facts,
+            invalidations=graph_update.invalidations,
         )
 
     # def update(self, memory_id: str, content: str) -> None:
@@ -117,34 +99,11 @@ class MemorySystem:
         user_id: str,
         limit: int,
     ) -> RetrievalResult:
-        """Return up to limit stored facts for user_id that best match query."""
-        search_result = self._facts_store.search_nearest_facts(user_id, query, limit)
-        # TODO: self.get() re-reads the vector store for every retrieved fact.
-        return RetrievalResult(
-            retrieved_facts=[self.get(fact.fact_id) for fact in search_result.facts]
-        )
+        """Return up to limit valid facts for user_id that best match query."""
+        facts = self._graph_retriever.retrieve_facts(query, user_id, limit)
+        return RetrievalResult(retrieved_facts=[self.get(fact.fact_id) for fact in facts])
 
     def get(self, fact_id: str) -> FactData:
-        """Return all stored data for fact_id. Raises KeyError if the fact is unknown."""
-        records = self._facts_store.get_fact_records(fact_id)
-        source: FactSource | None = None
-        add_log_entry = records.add_log_entry
-        if add_log_entry is not None:
-            source = FactSource(
-                add_id=add_log_entry.add_id,
-                session_id=add_log_entry.session_id,
-                created_at=add_log_entry.created_at,
-                messages=list(add_log_entry.messages),
-            )
-        stored_at = records.fact.stored_at
-        if not stored_at and add_log_entry is not None:
-            stored_at = add_log_entry.created_at
-        return FactData(
-            fact_id=records.fact.fact_id,
-            user_id=records.fact.user_id,
-            content=records.fact.content,
-            fact_hash=records.fact.fact_hash,
-            stored_at=stored_at,
-            entities=records.entity_names,
-            source=source,
-        )
+        """Return a fact and its origin. Raises KeyError if the fact is unknown."""
+        fact = self._facts_store.get_fact(fact_id)
+        return FactData(fact=fact, origin=self._facts_store.get_add_log_record(fact.add_id))

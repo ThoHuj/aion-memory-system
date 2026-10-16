@@ -225,3 +225,6 @@ dev/past_traces/
 
 # Parsed episodic memories for local dev inspection
 dev/data/
+
+# Local agent memory
+.cursor/PROJECT.md
