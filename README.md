@@ -1,7 +1,5 @@
 # Aion — Long-term memory for conversational agents
-
-**Course / assignment:** _(fill in)_  
-**Author:** _(fill in)_  
+ 
 **Date:** October 2026
 
 ---
