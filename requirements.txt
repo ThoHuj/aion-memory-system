@@ -1,5 +1,0 @@
-python-dotenv
-pydantic
-numpy
-psycopg[binary]
-rank-bm25

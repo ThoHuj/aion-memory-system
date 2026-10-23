@@ -6,16 +6,16 @@ import psycopg
 from dotenv import load_dotenv
 from psycopg.rows import dict_row
 
-from classes.conflict_resolution.conflict_resolver import ConflictResolver
-from classes.context_manager import ContextManager
-from classes.embedding_manager import EmbeddingManager
-from classes.entity_extraction import EntityExtractor
-from classes.entity_resolution.entity_resolver import EntityResolver
-from classes.facts_store import FactsStore
-from classes.graph_retriever import GraphRetriever
-from classes.memory_system import MemorySystem
-from classes.open_router_client import OpenRouterClient
-from classes.relation_extraction.relation_extractor import RelationExtractor
+from aion.conflict_resolution.conflict_resolver import ConflictResolver
+from aion.context_manager import ContextManager
+from aion.embedding_manager import EmbeddingManager
+from aion.entity_extraction import EntityExtractor
+from aion.entity_resolution.entity_resolver import EntityResolver
+from aion.facts_store import FactsStore
+from aion.graph_retriever import GraphRetriever
+from aion.memory_system import MemorySystem
+from aion.open_router_client import OpenRouterClient
+from aion.relation_extraction.relation_extractor import RelationExtractor
 from dev.cli import Cli
 from dev.mock_agent import MockAgent
 from dev.session_logger import SessionLogger

@@ -1,12 +1,12 @@
 from pydantic import BaseModel, Field
 
-from classes.conflict_resolution.conflict_resolver import ConflictResolver
-from classes.context_manager import ContextManager, ContextResult
-from classes.embedding_manager import EmbeddingManager
-from classes.entity_extraction import EntityExtractor
-from classes.entity_resolution.entity_resolver import EntityResolver
-from classes.facts_store import FactsStore
-from classes.graph_models import (
+from aion.conflict_resolution.conflict_resolver import ConflictResolver
+from aion.context_manager import ContextManager, ContextResult
+from aion.embedding_manager import EmbeddingManager
+from aion.entity_extraction import EntityExtractor
+from aion.entity_resolution.entity_resolver import EntityResolver
+from aion.facts_store import FactsStore
+from aion.graph_models import (
     AddLogRecord,
     ExtractedEntity,
     ExtractedFact,
@@ -14,8 +14,8 @@ from classes.graph_models import (
     GraphUpdate,
     StoredFact,
 )
-from classes.graph_retriever import GraphRetriever
-from classes.relation_extraction.relation_extractor import RelationExtractor
+from aion.graph_retriever import GraphRetriever
+from aion.relation_extraction.relation_extractor import RelationExtractor
 
 
 class FactData(BaseModel):
