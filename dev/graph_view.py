@@ -16,7 +16,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from aion.graph_models import normalize_graph_name
+from aion_memory.graph_models import normalize_graph_name
 
 DEFAULT_OUTPUT_PATH = Path(__file__).parent / "data" / "graph.html"
 

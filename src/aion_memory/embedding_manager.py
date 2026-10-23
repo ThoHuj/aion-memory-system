@@ -1,5 +1,5 @@
-from aion.graph_models import GraphUpdate
-from aion.open_router_client import OpenRouterClient
+from aion_memory.graph_models import GraphUpdate
+from aion_memory.open_router_client import OpenRouterClient
 
 
 class EmbeddingManager:

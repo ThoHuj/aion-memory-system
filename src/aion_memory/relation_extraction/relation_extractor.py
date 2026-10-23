@@ -1,15 +1,15 @@
 from pydantic import BaseModel, Field
 
-from aion.context_manager import ContextResult
-from aion.graph_models import (
+from aion_memory.context_manager import ContextResult
+from aion_memory.graph_models import (
     ExtractedEntity,
     ExtractedFact,
     GraphUpdate,
     normalize_graph_name,
     parse_world_time,
 )
-from aion.open_router_client import OpenRouterClient
-from aion.relation_extraction.prompts import (
+from aion_memory.open_router_client import OpenRouterClient
+from aion_memory.relation_extraction.prompts import (
     RELATION_EXTRACTION_DESTINATION_FIELD_DESCRIPTION,
     RELATION_EXTRACTION_RELATIONS_FIELD_DESCRIPTION,
     RELATION_EXTRACTION_RELATIONSHIP_FIELD_DESCRIPTION,

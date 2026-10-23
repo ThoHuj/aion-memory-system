@@ -81,7 +81,7 @@ Retrieval does **not** merge episodic and semantic stores into one undifferentia
 
 ### Add pipeline (extraction → storage)
 
-Implemented in `MemorySystem.add()` (`src/aion/memory_system.py`):
+Implemented in `MemorySystem.add()` (`src/aion_memory/memory_system.py`):
 
 1. **Context** — `ContextManager` formats new messages and recent session messages from prior `add_log` rows.
 2. **Entity extraction** — LLM structured output (`EntityExtractor`).
@@ -125,7 +125,7 @@ aion-memory-system/
 ├── pyproject.toml          # Package metadata and dependencies (uv)
 ├── docker-compose.yml      # Postgres + pgvector on localhost:5433
 ├── .env.example            # Copy to .env (not committed)
-├── src/aion/               # Memory library (import as `aion`)
+├── src/aion_memory/        # Memory library (import as `aion_memory`)
 │   ├── memory_system.py    # Public facade: add, retrieve, get
 │   ├── facts_store/        # SQL schema + Postgres access
 │   ├── entity_extraction/
@@ -186,7 +186,7 @@ Edit `.env`:
 docker compose up -d
 ```
 
-On first run, `main.py` applies the schema from `src/aion/facts_store/schema.sql` (`FactsStore.create_schema()`).
+On first run, `main.py` applies the schema from `src/aion_memory/facts_store/schema.sql` (`FactsStore.create_schema()`).
 
 ### 4. Run the interactive demo
 
@@ -239,7 +239,7 @@ Opens/writes `dev/data/graph.html` (requires DB running and facts for that user)
 
 ## Public API (library)
 
-`MemorySystem` (`src/aion/memory_system.py`):
+`MemorySystem` (`src/aion_memory/memory_system.py`):
 
 | Method | Purpose |
 |--------|---------|
@@ -253,7 +253,7 @@ Opens/writes `dev/data/graph.html` (requires DB running and facts for that user)
 
 ## Database schema (overview)
 
-Defined in `src/aion/facts_store/schema.sql`:
+Defined in `src/aion_memory/facts_store/schema.sql`:
 
 - **`add_log`** — provenance: `add_id`, `user_id`, `session_id`, `messages` (JSONB), `created_at`
 - **`entities`** — `entity_id`, `user_id`, `name`, `entity_type`, `embedding` (vector)
@@ -266,10 +266,10 @@ Invalidated facts use **`valid_to`** / **`world_valid_to`** rather than hard del
 ## Design choices (brief)
 
 - **Knowledge graph vs. flat memory list** — Relations support multi-hop retrieval and explicit contradiction handling between edges sharing endpoints.
-- **LLM-heavy extraction** — Matches Mem0-style staged extraction; quality depends on model choice and prompts under `src/aion/*/prompts.py`.
+- **LLM-heavy extraction** — Matches Mem0-style staged extraction; quality depends on model choice and prompts under `src/aion_memory/*/prompts.py`.
 - **Hybrid retrieval** — Graph traversal from embedding-matched seeds + BM25 re-ranking balances recall and query relevance.
 - **Provenance as first-class** — `add_log` plus `get_fact_sources` tool avoids hallucinating details from compressed fact lines alone.
-- **`dev/` vs. `src/aion/`** — Core memory logic lives in `src/aion/`; CLI, mock agent, logging, and graph HTML are demo layers.
+- **`dev/` vs. `src/aion_memory/`** — Core memory logic lives in `src/aion_memory/`; CLI, mock agent, logging, and graph HTML are demo layers.
 
 ---
 
@@ -287,13 +287,13 @@ Invalidated facts use **`valid_to`** / **`world_valid_to`** rather than hard del
 
 | Area | Start here |
 |------|------------|
-| Orchestration | `src/aion/memory_system.py`, `main.py` |
-| Storage | `src/aion/facts_store/facts_store.py`, `schema.sql` |
-| Extraction | `src/aion/entity_extraction/`, `src/aion/relation_extraction/` |
-| Deduplication / time | `src/aion/entity_resolution/`, `src/aion/conflict_resolution/` |
-| Retrieval | `src/aion/graph_retriever.py` |
+| Orchestration | `src/aion_memory/memory_system.py`, `main.py` |
+| Storage | `src/aion_memory/facts_store/facts_store.py`, `schema.sql` |
+| Extraction | `src/aion_memory/entity_extraction/`, `src/aion_memory/relation_extraction/` |
+| Deduplication / time | `src/aion_memory/entity_resolution/`, `src/aion_memory/conflict_resolution/` |
+| Retrieval | `src/aion_memory/graph_retriever.py` |
 | Agent integration | `dev/mock_agent.py`, `dev/agent_tools.py` |
-| Prompts | `src/aion/*/prompts.py` |
+| Prompts | `src/aion_memory/*/prompts.py` |
 
 ---
 

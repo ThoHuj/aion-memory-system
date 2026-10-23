@@ -2,10 +2,10 @@ import re
 
 from rank_bm25 import BM25Okapi
 
-from aion.embedding_manager import EmbeddingManager
-from aion.entity_extraction import EntityExtractor
-from aion.facts_store import FactsStore
-from aion.graph_models import StoredFact, normalize_graph_name
+from aion_memory.embedding_manager import EmbeddingManager
+from aion_memory.entity_extraction import EntityExtractor
+from aion_memory.facts_store import FactsStore
+from aion_memory.graph_models import StoredFact, normalize_graph_name
 
 
 def tokenize(text: str) -> list[str]:

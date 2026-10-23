@@ -1,7 +1,7 @@
 import json
 
-from aion.graph_models import format_fact_line
-from aion.memory_system import MemorySystem
+from aion_memory.graph_models import format_fact_line
+from aion_memory.memory_system import MemorySystem
 
 GET_FACT_SOURCES_DEFINITION: dict[str, object] = {
     "type": "function",

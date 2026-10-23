@@ -1,21 +1,21 @@
 from pydantic import BaseModel, Field
 
-from aion.conflict_resolution.prompts import (
+from aion_memory.conflict_resolution.prompts import (
     CONFLICT_RESOLUTION_INVALIDATIONS_FIELD_DESCRIPTION,
     CONFLICT_RESOLUTION_WORLD_VALID_TO_FIELD_DESCRIPTION,
     format_conflict_resolution_system_prompt,
     format_conflict_resolution_user_prompt,
 )
-from aion.context_manager import ContextResult
-from aion.facts_store import FactsStore
-from aion.graph_models import (
+from aion_memory.context_manager import ContextResult
+from aion_memory.facts_store import FactsStore
+from aion_memory.graph_models import (
     ExtractedFact,
     FactInvalidation,
     GraphUpdate,
     format_fact_line,
     parse_world_time,
 )
-from aion.open_router_client import OpenRouterClient
+from aion_memory.open_router_client import OpenRouterClient
 
 
 class _InvalidationItem(BaseModel):

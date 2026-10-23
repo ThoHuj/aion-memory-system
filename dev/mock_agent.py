@@ -3,9 +3,9 @@ import uuid
 from collections.abc import Callable
 from functools import partial
 
-from aion.graph_models import format_fact_line
-from aion.memory_system import FactData, MemorySystem
-from aion.open_router_client import OpenRouterClient
+from aion_memory.graph_models import format_fact_line
+from aion_memory.memory_system import FactData, MemorySystem
+from aion_memory.open_router_client import OpenRouterClient
 from dev.agent_tools import GET_FACT_SOURCES_DEFINITION, get_fact_sources
 from dev.session_logger import SessionLogger
 

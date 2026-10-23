@@ -2,22 +2,22 @@ import uuid
 
 from pydantic import BaseModel, Field
 
-from aion.context_manager import ContextResult
-from aion.entity_resolution.prompts import (
+from aion_memory.context_manager import ContextResult
+from aion_memory.entity_resolution.prompts import (
     ENTITY_RESOLUTION_EXISTING_ENTITY_ID_FIELD_DESCRIPTION,
     ENTITY_RESOLUTION_MATCHES_FIELD_DESCRIPTION,
     ENTITY_RESOLUTION_SYSTEM_PROMPT,
     format_entity_resolution_user_prompt,
 )
-from aion.facts_store import FactsStore
-from aion.graph_models import (
+from aion_memory.facts_store import FactsStore
+from aion_memory.graph_models import (
     ExtractedEntity,
     GraphUpdate,
     StoredEntity,
     format_fact_line,
     normalize_graph_name,
 )
-from aion.open_router_client import OpenRouterClient
+from aion_memory.open_router_client import OpenRouterClient
 
 
 class _EntityMatch(BaseModel):

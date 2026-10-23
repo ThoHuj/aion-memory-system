@@ -9,7 +9,7 @@ import psycopg
 from psycopg.rows import DictRow
 from psycopg.types.json import Jsonb
 
-from aion.graph_models import (
+from aion_memory.graph_models import (
     AddLogRecord,
     GraphUpdate,
     StoredEntity,
@@ -17,7 +17,7 @@ from aion.graph_models import (
 )
 
 if TYPE_CHECKING:
-    from aion.context_manager import ContextResult
+    from aion_memory.context_manager import ContextResult
 
 FACT_SELECT = (
     "SELECT facts.*, "
