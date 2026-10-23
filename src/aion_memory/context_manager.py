@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field
 
-from classes.facts_store import FactsStore
+from aion_memory.facts_store import FactsStore
 
 
 def format_messages(messages: list[dict[str, str]]) -> str:

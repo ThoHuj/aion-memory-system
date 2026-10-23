@@ -1,0 +1,21 @@
+[project]
+name = "aion-memory"
+version = "0.1.0"
+description = "Long-term memory for conversational agents, backed by a PostgreSQL knowledge graph"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy",
+    "psycopg[binary]",
+    "pydantic",
+    "python-dotenv",
+    "rank-bm25",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.9,<0.13"]
+build-backend = "uv_build"
+
+# The distribution is aion-memory; the import name is `aion_memory`.
+[tool.uv.build-backend]
+module-name = "aion_memory"

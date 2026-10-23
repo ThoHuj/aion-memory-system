@@ -1,15 +1,15 @@
 from pydantic import BaseModel, Field
 
-from classes.context_manager import ContextResult
-from classes.entity_extraction.prompts import (
+from aion_memory.context_manager import ContextResult
+from aion_memory.entity_extraction.prompts import (
     ENTITY_EXTRACTION_ENTITIES_FIELD_DESCRIPTION,
     ENTITY_EXTRACTION_ENTITY_FIELD_DESCRIPTION,
     ENTITY_EXTRACTION_ENTITY_TYPE_FIELD_DESCRIPTION,
     format_entity_extraction_system_prompt,
     format_entity_extraction_user_prompt,
 )
-from classes.graph_models import ExtractedEntity, GraphUpdate, normalize_graph_name
-from classes.open_router_client import OpenRouterClient
+from aion_memory.graph_models import ExtractedEntity, GraphUpdate, normalize_graph_name
+from aion_memory.open_router_client import OpenRouterClient
 
 
 class _EntityItem(BaseModel):

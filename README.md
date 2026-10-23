@@ -81,7 +81,7 @@ Retrieval does **not** merge episodic and semantic stores into one undifferentia
 
 ### Add pipeline (extraction → storage)
 
-Implemented in `MemorySystem.add()` (`classes/memory_system.py`):
+Implemented in `MemorySystem.add()` (`src/aion_memory/memory_system.py`):
 
 1. **Context** — `ContextManager` formats new messages and recent session messages from prior `add_log` rows.
 2. **Entity extraction** — LLM structured output (`EntityExtractor`).
@@ -111,7 +111,7 @@ The mock agent injects retrieved facts into a `<relevant_user_facts>` block befo
 | Language | Python 3.12+ |
 | LLM / embeddings API | OpenRouter (chat, structured extraction, embeddings) |
 | Storage | PostgreSQL 17 with **pgvector** (Docker) |
-| Dependencies | See `requirements.txt` (`pydantic`, `psycopg`, `numpy`, `rank-bm25`, `python-dotenv`) |
+| Dependencies | See `pyproject.toml` (`pydantic`, `psycopg`, `numpy`, `rank-bm25`, `python-dotenv`) |
 
 Internal design notes for AI tooling live in `AGENTS.md` (owner guardrails); this README describes the **implemented** system (Postgres graph, not the older “JSON-only v1” sketch in that file).
 
@@ -120,12 +120,12 @@ Internal design notes for AI tooling live in `AGENTS.md` (owner guardrails); thi
 ## Project layout
 
 ```
-Aion/
+aion-memory-system/
 ├── main.py                 # Entry point: wire MemorySystem + MockAgent + CLI
-├── requirements.txt
+├── pyproject.toml          # Package metadata and dependencies (uv)
 ├── docker-compose.yml      # Postgres + pgvector on localhost:5433
 ├── .env.example            # Copy to .env (not committed)
-├── classes/                # Memory library (intended reusable core)
+├── src/aion_memory/        # Memory library (import as `aion_memory`)
 │   ├── memory_system.py    # Public facade: add, retrieve, get
 │   ├── facts_store/        # SQL schema + Postgres access
 │   ├── entity_extraction/
@@ -162,10 +162,8 @@ Aion/
 ### 1. Clone and install dependencies
 
 ```bash
-cd Aion
-python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+cd aion-memory-system
+uv sync
 ```
 
 ### 2. Configure environment
@@ -188,12 +186,12 @@ Edit `.env`:
 docker compose up -d
 ```
 
-On first run, `main.py` applies the schema from `classes/facts_store/schema.sql` (`FactsStore.create_schema()`).
+On first run, `main.py` applies the schema from `src/aion_memory/facts_store/schema.sql` (`FactsStore.create_schema()`).
 
 ### 4. Run the interactive demo
 
 ```bash
-python main.py
+uv run python main.py
 ```
 
 stderr prints the path to the session log file, e.g. `dev/data/logs/<session-uuid>.jsonl`.
@@ -241,7 +239,7 @@ Opens/writes `dev/data/graph.html` (requires DB running and facts for that user)
 
 ## Public API (library)
 
-`MemorySystem` (`classes/memory_system.py`):
+`MemorySystem` (`src/aion_memory/memory_system.py`):
 
 | Method | Purpose |
 |--------|---------|
@@ -255,7 +253,7 @@ Opens/writes `dev/data/graph.html` (requires DB running and facts for that user)
 
 ## Database schema (overview)
 
-Defined in `classes/facts_store/schema.sql`:
+Defined in `src/aion_memory/facts_store/schema.sql`:
 
 - **`add_log`** — provenance: `add_id`, `user_id`, `session_id`, `messages` (JSONB), `created_at`
 - **`entities`** — `entity_id`, `user_id`, `name`, `entity_type`, `embedding` (vector)
@@ -268,10 +266,10 @@ Invalidated facts use **`valid_to`** / **`world_valid_to`** rather than hard del
 ## Design choices (brief)
 
 - **Knowledge graph vs. flat memory list** — Relations support multi-hop retrieval and explicit contradiction handling between edges sharing endpoints.
-- **LLM-heavy extraction** — Matches Mem0-style staged extraction; quality depends on model choice and prompts under `classes/*/prompts.py`.
+- **LLM-heavy extraction** — Matches Mem0-style staged extraction; quality depends on model choice and prompts under `src/aion_memory/*/prompts.py`.
 - **Hybrid retrieval** — Graph traversal from embedding-matched seeds + BM25 re-ranking balances recall and query relevance.
 - **Provenance as first-class** — `add_log` plus `get_fact_sources` tool avoids hallucinating details from compressed fact lines alone.
-- **`dev/` vs. `classes/`** — Core memory logic lives in `classes/`; CLI, mock agent, logging, and graph HTML are demo layers.
+- **`dev/` vs. `src/aion_memory/`** — Core memory logic lives in `src/aion_memory/`; CLI, mock agent, logging, and graph HTML are demo layers.
 
 ---
 
@@ -289,13 +287,13 @@ Invalidated facts use **`valid_to`** / **`world_valid_to`** rather than hard del
 
 | Area | Start here |
 |------|------------|
-| Orchestration | `classes/memory_system.py`, `main.py` |
-| Storage | `classes/facts_store/facts_store.py`, `schema.sql` |
-| Extraction | `classes/entity_extraction/`, `classes/relation_extraction/` |
-| Deduplication / time | `classes/entity_resolution/`, `classes/conflict_resolution/` |
-| Retrieval | `classes/graph_retriever.py` |
+| Orchestration | `src/aion_memory/memory_system.py`, `main.py` |
+| Storage | `src/aion_memory/facts_store/facts_store.py`, `schema.sql` |
+| Extraction | `src/aion_memory/entity_extraction/`, `src/aion_memory/relation_extraction/` |
+| Deduplication / time | `src/aion_memory/entity_resolution/`, `src/aion_memory/conflict_resolution/` |
+| Retrieval | `src/aion_memory/graph_retriever.py` |
 | Agent integration | `dev/mock_agent.py`, `dev/agent_tools.py` |
-| Prompts | `classes/*/prompts.py` |
+| Prompts | `src/aion_memory/*/prompts.py` |
 
 ---
 
