@@ -34,18 +34,18 @@ This repository is intended for review and grading: setup steps, architecture, a
 
 ```mermaid
 flowchart TB
-  subgraph cli [Demo CLI]
+  subgraph cli["Demo CLI"]
     UserInput[User input]
     MockAgent[MockAgent]
   end
 
-  subgraph memory [MemorySystem]
+  subgraph memsys["MemorySystem"]
     Add[add]
     Retrieve[retrieve]
     Get[get]
   end
 
-  subgraph pipeline [Add pipeline]
+  subgraph addp["Add pipeline"]
     CM[ContextManager]
     EE[EntityExtractor]
     RE[RelationExtractor]
@@ -55,7 +55,7 @@ flowchart TB
     FS[FactsStore]
   end
 
-  subgraph retrieval [Retrieve pipeline]
+  subgraph retp["Retrieve pipeline"]
     GR[GraphRetriever]
   end
 
@@ -64,7 +64,13 @@ flowchart TB
   Retrieve --> GR
   GR --> FS
   MockAgent --> Add
-  Add --> CM --> EE --> RE --> EM --> ER --> CR --> FS
+  Add --> CM
+  CM --> EE
+  EE --> RE
+  RE --> EM
+  EM --> ER
+  ER --> CR
+  CR --> FS
   MockAgent --> Get
   Get --> FS
 ```
