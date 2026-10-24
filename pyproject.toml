@@ -19,3 +19,8 @@ build-backend = "uv_build"
 # The distribution is aion-memory; the import name is `aion_memory`.
 [tool.uv.build-backend]
 module-name = "aion_memory"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.17.2",
+]
