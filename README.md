@@ -119,8 +119,6 @@ The mock agent injects retrieved facts into a `<relevant_user_facts>` block befo
 | Storage | PostgreSQL 17 with **pgvector** (Docker) |
 | Dependencies | See `pyproject.toml` (`pydantic`, `psycopg`, `numpy`, `rank-bm25`, `python-dotenv`) |
 
-Internal design notes for AI tooling live in `AGENTS.md` (owner guardrails); this README describes the **implemented** system (Postgres graph, not the older “JSON-only v1” sketch in that file).
-
 ---
 
 ## Project layout
