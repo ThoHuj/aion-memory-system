@@ -36,15 +36,20 @@ GET_FACT_SOURCES_DEFINITION: dict[str, object] = {
 }
 
 
-def get_fact_sources(memory_system: MemorySystem, fact_ids: list[str]) -> str:
+def get_fact_sources(
+    memory_system: MemorySystem,
+    user_id: str,
+    fact_ids: list[str],
+) -> str:
     """Return a JSON string with the source messages for each given fact id.
 
-    `memory_system` is bound by the calling code; the agent only supplies `fact_ids`.
+    `memory_system` and `user_id` are bound by the calling code; the agent only
+    supplies `fact_ids`.
     """
     results: list[dict[str, object]] = []
     for fact_id in fact_ids:
         try:
-            fact_data = memory_system.get(fact_id)
+            fact_data = memory_system.get(fact_id, user_id)
         except KeyError:
             results.append({"fact_id": fact_id, "error": "fact not found"})
             continue

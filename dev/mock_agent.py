@@ -46,7 +46,7 @@ class MockAgent:
         self._messages: list[dict[str, object]] = []
         self._tool_definitions: list[dict[str, object]] = [GET_FACT_SOURCES_DEFINITION]
         self._tool_functions: dict[str, Callable[..., str]] = {
-            "get_fact_sources": partial(get_fact_sources, memory_system),
+            "get_fact_sources": partial(get_fact_sources, memory_system, user_id),
         }
 
     def import_conversation_history(self, messages: list[dict[str, str]]) -> None:

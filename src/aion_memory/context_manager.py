@@ -53,6 +53,7 @@ class ContextManager:
     ) -> ContextResult:
         """Produce a context result; reads session messages before this add is logged."""
         recent_session_messages = self._facts_store.get_most_recent_session_messages(
+            user_id,
             session_id,
             self._recent_session_messages_limit,
         )

@@ -81,7 +81,7 @@ flowchart TB
 2. **Facts** — Directed edges: `source -- relation -- destination`, with two time dimensions:
    - **`valid_from` / `valid_to`** — when the fact was believed true in the **system** (belief interval).
    - **`world_valid_from` / `world_valid_to`** — when the fact was true in the **real world**, as inferred from dialogue (e.g. “I moved last month”).
-3. **`add_log`** — Each `add()` call records the **exact message list** used for extraction (`add_id`), enabling provenance lookup via `MemorySystem.get(fact_id)`.
+3. **`add_log`** — Each `add()` call records the **exact message list** used for extraction (`add_id`), enabling provenance lookup via `MemorySystem.get(fact_id, user_id)`.
 
 Retrieval does **not** merge episodic and semantic stores into one undifferentiated blob: chat injection uses **retrieved facts**; full dialogue context for a fact is fetched **on demand** through `get()` / the agent tool.
 

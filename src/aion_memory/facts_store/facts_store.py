@@ -148,22 +148,22 @@ class FactsStore:
         ).fetchone()
         return row["fact_id"] if row is not None else None
 
-    def get_fact(self, fact_id: str) -> StoredFact:
-        """Return a fact of any validity; raises KeyError if unknown."""
+    def get_fact(self, user_id: str, fact_id: str) -> StoredFact:
+        """Return a fact of user_id of any validity; raises KeyError if unknown or owned by another user."""
         row = self._connection.execute(
-            FACT_SELECT + " WHERE facts.fact_id = %s",
-            (fact_id,),
+            FACT_SELECT + " WHERE facts.user_id = %s AND facts.fact_id = %s",
+            (user_id, fact_id),
         ).fetchone()
         if row is None:
             raise KeyError(fact_id)
         return _to_stored_fact(row)
 
-    def get_add_log_record(self, add_id: str) -> AddLogRecord:
-        """Return the add log record for add_id; raises KeyError if unknown."""
+    def get_add_log_record(self, user_id: str, add_id: str) -> AddLogRecord:
+        """Return the add log record for add_id of user_id; raises KeyError if unknown or owned by another user."""
         row = self._connection.execute(
             "SELECT add_id, user_id, session_id, messages, created_at "
-            "FROM add_log WHERE add_id = %s",
-            (add_id,),
+            "FROM add_log WHERE user_id = %s AND add_id = %s",
+            (user_id, add_id),
         ).fetchone()
         if row is None:
             raise KeyError(add_id)
@@ -177,16 +177,17 @@ class FactsStore:
 
     def get_most_recent_session_messages(
         self,
+        user_id: str,
         session_id: str,
         limit: int = 10,
     ) -> list[dict[str, str]]:
-        """Return up to limit most recent messages of the session, oldest first."""
+        """Return up to limit most recent messages of the session of user_id, oldest first."""
         if limit <= 0:
             return []
         rows = self._connection.execute(
-            "SELECT messages FROM add_log WHERE session_id = %s "
+            "SELECT messages FROM add_log WHERE user_id = %s AND session_id = %s "
             "ORDER BY created_at DESC LIMIT %s",
-            (session_id, limit),
+            (user_id, session_id, limit),
         ).fetchall()
         messages: list[dict[str, str]] = []
         for row in reversed(rows):

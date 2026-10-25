@@ -101,9 +101,14 @@ class MemorySystem:
     ) -> RetrievalResult:
         """Return up to limit valid facts for user_id that best match query."""
         facts = self._graph_retriever.retrieve_facts(query, user_id, limit)
-        return RetrievalResult(retrieved_facts=[self.get(fact.fact_id) for fact in facts])
+        return RetrievalResult(
+            retrieved_facts=[self.get(fact.fact_id, user_id) for fact in facts]
+        )
 
-    def get(self, fact_id: str) -> FactData:
-        """Return a fact and its origin. Raises KeyError if the fact is unknown."""
-        fact = self._facts_store.get_fact(fact_id)
-        return FactData(fact=fact, origin=self._facts_store.get_add_log_record(fact.add_id))
+    def get(self, fact_id: str, user_id: str) -> FactData:
+        """Return a fact of user_id and its origin. Raises KeyError if the fact is unknown or owned by another user."""
+        fact = self._facts_store.get_fact(user_id, fact_id)
+        return FactData(
+            fact=fact,
+            origin=self._facts_store.get_add_log_record(user_id, fact.add_id),
+        )
