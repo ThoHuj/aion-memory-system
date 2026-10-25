@@ -35,7 +35,7 @@ These shape the public surface. Changing them after other code depends on the li
   - *Why:* the library will share a database with the host's own tables and with other agents.
 - [x] **Scope everything by user.** **Decided:** the library is multi-user ready, so every store lookup is scoped by `user_id`.
   - Done: `get_fact`, `get_add_log_record`, `get_most_recent_session_messages` and `MemorySystem.get` take a `user_id`. Another user's data is reported as unknown (`KeyError`).
-  - Still unscoped: the invalidation `UPDATE` in `store_graph_update` matches on `fact_id` only. The ids come from user-scoped lookups, so it is safe in practice, but the statement itself has no `user_id` guard.
+  - Also done: the invalidation `UPDATE` in `store_graph_update` only closes facts of the user the update belongs to.
   - *Why:* a host serving several users must not be able to read across them by accident.
 - [ ] **Removing a user's data.** **Not designed:** the library keeps its own copy of the messages it is given (decided), so a host that must erase a user needs a way to remove that user's `add_log` rows, entities and facts. `delete` is currently only a commented-out stub in `memory_system.py`.
   - *Why:* erasing a user has to cover the library's copy as well as the host's history.

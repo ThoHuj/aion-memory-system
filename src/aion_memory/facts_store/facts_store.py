@@ -75,7 +75,10 @@ class FactsStore(Protocol):
         graph_update: GraphUpdate,
         context_result: ContextResult,
     ) -> None:
-        """Persist the add log, new entities, invalidations, and facts as one unit."""
+        """Persist the add log, new entities, invalidations, and facts as one unit.
+
+        An invalidation only closes a fact of the user the update belongs to.
+        """
         ...
 
     def close(self) -> None:

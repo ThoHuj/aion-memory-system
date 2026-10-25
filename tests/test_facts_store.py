@@ -245,6 +245,30 @@ def test_invalidation_closes_the_fact_but_keeps_it_readable(
     assert datetime.fromisoformat(stored.world_valid_to) == stopped_at
 
 
+def test_invalidation_only_closes_facts_of_the_same_user(
+    facts_store: FactsStore,
+) -> None:
+    """An update by one user cannot close another user's fact, even with its id."""
+    owns = fact("alice", "owns", "rex")
+    store_update(
+        facts_store,
+        "alice",
+        [entity("alice", [0, 0, 1]), entity("rex", [1, 0, 0])],
+        [owns],
+    )
+
+    store_update(
+        facts_store,
+        "bob",
+        [],
+        [],
+        minutes=1,
+        invalidations=[FactInvalidation(fact_id=owns.fact_id, world_valid_to=None)],
+    )
+
+    assert facts_store.get_fact("alice", owns.fact_id).valid_to is None
+
+
 def test_only_entities_used_by_a_fact_are_stored(facts_store: FactsStore) -> None:
     """An entity that no fact refers to is not persisted."""
     store_update(

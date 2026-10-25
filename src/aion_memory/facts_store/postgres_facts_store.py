@@ -293,10 +293,11 @@ class PostgresFactsStore:
                 connection.execute(
                     "UPDATE facts SET valid_to = %s, "
                     "world_valid_to = COALESCE(world_valid_to, %s) "
-                    "WHERE fact_id = %s AND valid_to IS NULL",
+                    "WHERE user_id = %s AND fact_id = %s AND valid_to IS NULL",
                     (
                         added_at,
                         _optional_datetime(invalidation.world_valid_to),
+                        user_id,
                         invalidation.fact_id,
                     ),
                 )

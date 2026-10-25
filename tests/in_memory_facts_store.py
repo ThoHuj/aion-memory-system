@@ -257,7 +257,7 @@ class InMemoryFactsStore:
         self._entities.update(new_entity_rows)
         for invalidation in graph_update.invalidations:
             row = self._facts.get(invalidation.fact_id)
-            if row is not None and row.valid_to is None:
+            if row is not None and row.user_id == user_id and row.valid_to is None:
                 row.valid_to = added_at
                 row.world_valid_to = row.world_valid_to or _optional_datetime(
                     invalidation.world_valid_to
