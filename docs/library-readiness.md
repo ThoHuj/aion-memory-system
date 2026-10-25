@@ -51,13 +51,15 @@ These shape the public surface. Changing them after other code depends on the li
 - [ ] **Tests against real Postgres.** Run storage tests against the `pgvector/pgvector` image (testcontainers locally, a service container in CI), ideally across more than one Postgres version.
   - Started: the store and pipeline tests also run on the database in `DATABASE_URL`, in a throwaway schema, and skip without one. Still open: testcontainers or a CI service container, and more than one Postgres version.
   - *Why:* pgvector queries and transactions are where bugs hide, and mocks do not catch them.
-- [ ] **Document the requirements.** README states the Postgres version, the pgvector requirement, and the privileges needed for setup. A plain `postgres` image does not work.
+- [x] **Document the requirements.** README states the Postgres version, the pgvector requirement, and the privileges needed for setup. A plain `postgres` image does not work.
+  - Done: the "Database requirements" section in the README. The privilege claims are pinned by tests. Only PostgreSQL 16 and 17 were tried; other versions are open (see the real-Postgres tests item).
   - *Why:* this is the first thing a new host runs into.
 - [ ] **Move demo-only dependencies out of runtime.** `python-dotenv` is only needed by `main.py`; make it a dev dependency.
 
 ## 3. Packaging and polish
 
-- [ ] **Small public API.** Export only what hosts need from `__init__.py` with `__all__`; keep everything else private. The internal store interface and the Postgres store stay out of the exports.
+- [x] **Small public API.** Export only what hosts need from `__init__.py` with `__all__`; keep everything else private. The internal store interface and the Postgres store stay out of the exports.
+  - Done: the package exports `create_memory_system`, `MemorySystem`, its result types and `schema_sql`. A test pins the list.
 - [ ] **Typing and versioning.** Ship `py.typed`, follow semantic versioning, and keep a changelog.
 - [ ] **Loose dependency bounds.** Use wide ranges for library dependencies (e.g. `psycopg>=3.1,<4`) rather than pinning; the lockfile is for development only.
 - [x] **In-memory store implementation.** **Decided:** an in-memory implementation of the internal store interface, used for fast tests only and not offered to hosts. Run the same contract tests against it and the Postgres store.

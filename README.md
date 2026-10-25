@@ -158,7 +158,7 @@ aion-memory-system/
 ### Prerequisites
 
 - Python **3.12+**
-- **Docker** (for PostgreSQL) or an existing Postgres instance with the **vector** extension
+- **Docker** (for PostgreSQL) or an existing Postgres instance with pgvector (see [Database requirements](#database-requirements))
 - An **OpenRouter API key** and models that support:
   - Chat completions (demo agent)
   - Structured JSON / tool-style outputs (extraction steps)
@@ -269,6 +269,17 @@ The database must have pgvector. By default `create_memory_system` enables the e
 
 ---
 
+## Database requirements
+
+- **PostgreSQL with pgvector.** A plain `postgres` image does not work. The library is developed against PostgreSQL 17 (the `pgvector/pgvector:pg17` image in `docker-compose.yml`), and the tests also pass on PostgreSQL 16. Other versions are untested.
+- **Where the tables go.** `add_log`, `entities` and `facts` are created in the connection's default schema. They are not prefixed or namespaced yet, so avoid a database where those names are taken.
+- **Privileges for setup, once.**
+  - Enabling pgvector (`CREATE EXTENSION vector`, which the library does unless you pass `create_schema=False`) usually needs a superuser, because the extension was not marked trusted in the build used for testing. On a managed server, ask for it to be enabled once per database.
+  - With pgvector enabled, a role that may create tables in the schema can run the rest of the setup without further rights.
+- **Privileges for everyday use.** `SELECT`, `INSERT` and `UPDATE` on the three tables are enough. To run with those rights only, set the tables up yourself with `aion_memory.schema_sql()` and pass `create_schema=False`.
+
+---
+
 ## Database schema (overview)
 
 Defined in `src/aion_memory/facts_store/schema.sql`:
@@ -294,7 +305,7 @@ Invalidated facts use **`valid_to`** / **`world_valid_to`** rather than hard del
 ## Known limitations
 
 - **Cost and latency** — Each turn may trigger multiple LLM and embedding calls (add + retrieve + chat).
-- **No automated tests** — Behavior is validated manually via CLI, logs, and optional graph view.
+- **Tests do not call real models** — The automated tests use scripted stand-ins for the OpenRouter models, and their Postgres variants need a reachable database. Extraction quality is validated manually via CLI, logs, and optional graph view.
 - **Single-user demo defaults** — `MockAgent` defaults to `user_id="user_01"`; memory is partitioned by `user_id` in the database.
 - **Model sensitivity** — Structured extraction and conflict resolution require capable models; weak models may yield empty or inconsistent graphs.
 - **Session logger vs. agent user id** — `main.py` logs session metadata with one display name while the agent may use the default `user_id`; align both in `main.py` if demos should match log labels and stored graph data.
