@@ -259,6 +259,9 @@ Opens/writes `dev/data/graph.html` (requires DB running and facts for that user)
 | `add(messages, user_id, session_id)` | Run full extraction pipeline; return entities, new facts, invalidations |
 | `retrieve(query, user_id, limit)` | BM25-ranked facts from graph retrieval |
 | `get(fact_id, user_id)` | Stored fact plus originating `add_log` messages |
+| `close()` | Release the database connections; call once at shutdown |
+
+`create_memory_system(...)` takes the database URL and opens a small pool of connections of its own, so calls from several threads do not share one connection. Call `close()` when the host shuts down.
 
 `update` and `delete` are not implemented yet.
 

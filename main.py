@@ -12,6 +12,7 @@ from dev.session_logger import SessionLogger
 
 
 def load_openrouter_config():
+    """Read the OpenRouter settings from the environment, exiting if one is missing."""
     load_dotenv()
     api_key = os.environ.get("OPENROUTER_API_KEY")
     chat_model = os.environ.get("OPENROUTER_CHAT_MODEL")
@@ -43,6 +44,7 @@ def load_database_url() -> str:
 
 
 def main() -> None:
+    """Wire the memory system, the mock agent and the CLI, run the CLI, then shut down."""
     api_key, chat_model, extraction_model, embedding_model = load_openrouter_config()
     database_url = load_database_url()
     memory_system = create_memory_system(
@@ -51,19 +53,22 @@ def main() -> None:
         embedding_model,
         database_url,
     )
-    open_router_client = OpenRouterClient(api_key=api_key, model=chat_model)
-    session_id = str(uuid.uuid4())
-    session_logger = SessionLogger(session_id=session_id, user_id="Tjorven")
-    mock_agent = MockAgent(
-        open_router_client=open_router_client,
-        memory_system=memory_system,
-        session_id=session_id,
-        session_logger=session_logger,
-    )
-    print(f"Session log: {session_logger.log_path}", file=sys.stderr)
+    try:
+        open_router_client = OpenRouterClient(api_key=api_key, model=chat_model)
+        session_id = str(uuid.uuid4())
+        session_logger = SessionLogger(session_id=session_id, user_id="Tjorven")
+        mock_agent = MockAgent(
+            open_router_client=open_router_client,
+            memory_system=memory_system,
+            session_id=session_id,
+            session_logger=session_logger,
+        )
+        print(f"Session log: {session_logger.log_path}", file=sys.stderr)
 
-    cli = Cli(mock_agent=mock_agent)
-    cli.run()
+        cli = Cli(mock_agent=mock_agent)
+        cli.run()
+    finally:
+        memory_system.close()
 
 
 if __name__ == "__main__":

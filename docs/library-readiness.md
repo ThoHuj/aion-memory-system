@@ -12,8 +12,8 @@ Items are grouped by when they become expensive to change.
 
 These shape the public surface. Changing them after other code depends on the library is a breaking change.
 
-- [ ] **Connection ownership.** **Decided:** hosts pass a `database_url` only. The library manages its own connections, with a pool internally, and offers a clean shutdown.
-  - `factory.py` currently opens a single connection and has no way to close it.
+- [x] **Connection ownership.** **Decided:** hosts pass a `database_url` only. The library manages its own connections, with a pool internally, and offers a clean shutdown.
+  - Done: `PostgresFactsStore.connect` opens a pool (1 to 5 connections), each operation borrows a connection, and `MemorySystem.close()` closes the pool. An unreachable database fails right away with psycopg's own error.
   - Possibly later: also accept a host-managed pool. Adding that does not break existing hosts. When it is added, close only what the library opened itself, and do not change connection-level settings (`autocommit`, `row_factory`) on a borrowed connection.
   - *Why:* a minimal integration is one string, and the pool option stays available without committing to it now.
 - [ ] **Sync vs. async.** **Decided:** sync first. Async methods may be added alongside later. The pool question is covered by connection ownership.

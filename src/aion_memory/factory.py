@@ -1,6 +1,3 @@
-import psycopg
-from psycopg.rows import dict_row
-
 from aion_memory.conflict_resolution.conflict_resolver import ConflictResolver
 from aion_memory.context_manager import ContextManager
 from aion_memory.embedding_manager import EmbeddingManager
@@ -23,9 +20,12 @@ def create_memory_system(
     extraction_client = OpenRouterClient(api_key=api_key, model=extraction_model)
     embedding_client = OpenRouterClient(api_key=api_key, model=embedding_model)
     embedding_manager = EmbeddingManager(embedding_client=embedding_client)
-    connection = psycopg.connect(database_url, autocommit=True, row_factory=dict_row)
-    facts_store = PostgresFactsStore(connection)
-    facts_store.create_schema()
+    facts_store = PostgresFactsStore.connect(database_url)
+    try:
+        facts_store.create_schema()
+    except BaseException:
+        facts_store.close()
+        raise
     entity_extractor = EntityExtractor(extraction_client=extraction_client)
     relation_extractor = RelationExtractor(extraction_client=extraction_client)
     context_manager = ContextManager(facts_store=facts_store)

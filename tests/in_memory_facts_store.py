@@ -265,6 +265,9 @@ class InMemoryFactsStore:
         for new_fact_row in new_fact_rows:
             self._facts[new_fact_row.fact_id] = new_fact_row
 
+    def close(self) -> None:
+        """Release the resources the store holds; an in-memory store holds none."""
+
     def _to_stored_fact(self, row: _FactRow) -> StoredFact:
         """Convert a fact row to a StoredFact, with the endpoint names resolved."""
         return StoredFact(

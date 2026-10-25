@@ -333,3 +333,9 @@ def test_unknown_ids_raise_key_error(facts_store: FactsStore) -> None:
         facts_store.get_fact("alice", "missing")
     with pytest.raises(KeyError):
         facts_store.get_add_log_record("alice", "missing")
+
+
+def test_a_store_can_be_closed_twice(facts_store: FactsStore) -> None:
+    """Closing releases the store's resources, and closing again does no harm."""
+    facts_store.close()
+    facts_store.close()

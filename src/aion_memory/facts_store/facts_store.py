@@ -77,3 +77,7 @@ class FactsStore(Protocol):
     ) -> None:
         """Persist the add log, new entities, invalidations, and facts as one unit."""
         ...
+
+    def close(self) -> None:
+        """Release the resources the store holds; it cannot be used afterwards."""
+        ...

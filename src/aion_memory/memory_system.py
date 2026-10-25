@@ -105,6 +105,10 @@ class MemorySystem:
             retrieved_facts=[self.get(fact.fact_id, user_id) for fact in facts]
         )
 
+    def close(self) -> None:
+        """Release the database connections. The memory system cannot be used afterwards."""
+        self._facts_store.close()
+
     def get(self, fact_id: str, user_id: str) -> FactData:
         """Return a fact of user_id and its origin. Raises KeyError if the fact is unknown or owned by another user."""
         fact = self._facts_store.get_fact(user_id, fact_id)
