@@ -6,7 +6,7 @@ from aion_memory.context_manager import ContextManager
 from aion_memory.embedding_manager import EmbeddingManager
 from aion_memory.entity_extraction import EntityExtractor
 from aion_memory.entity_resolution.entity_resolver import EntityResolver
-from aion_memory.facts_store import FactsStore
+from aion_memory.facts_store import PostgresFactsStore
 from aion_memory.graph_retriever import GraphRetriever
 from aion_memory.memory_system import MemorySystem
 from aion_memory.open_router_client import OpenRouterClient
@@ -24,7 +24,7 @@ def create_memory_system(
     embedding_client = OpenRouterClient(api_key=api_key, model=embedding_model)
     embedding_manager = EmbeddingManager(embedding_client=embedding_client)
     connection = psycopg.connect(database_url, autocommit=True, row_factory=dict_row)
-    facts_store = FactsStore(connection)
+    facts_store = PostgresFactsStore(connection)
     facts_store.create_schema()
     entity_extractor = EntityExtractor(extraction_client=extraction_client)
     relation_extractor = RelationExtractor(extraction_client=extraction_client)

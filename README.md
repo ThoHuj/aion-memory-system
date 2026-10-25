@@ -95,7 +95,7 @@ Implemented in `MemorySystem.add()` (`src/aion_memory/memory_system.py`):
 4. **Embeddings** — OpenRouter embeddings for entity names (`EmbeddingManager`).
 5. **Entity resolution** — Match new entities to existing ones via vector similarity + LLM disambiguation (`EntityResolver`); ensures a stable **user entity** keyed by `user_id`.
 6. **Conflict resolution** — Drop duplicate new facts; LLM proposes **invalidations** of stored facts that contradict new information (`ConflictResolver`).
-7. **Persist** — `FactsStore.store_graph_update()` writes entities, facts, invalidations, and the add log.
+7. **Persist** — `PostgresFactsStore.store_graph_update()` writes entities, facts, invalidations, and the add log.
 
 ### Retrieve pipeline
 
@@ -131,7 +131,7 @@ aion-memory-system/
 ├── .env.example            # Copy to .env (not committed)
 ├── src/aion_memory/        # Memory library (import as `aion_memory`)
 │   ├── memory_system.py    # Public facade: add, retrieve, get
-│   ├── facts_store/        # SQL schema + Postgres access
+│   ├── facts_store/        # Internal storage interface, Postgres store, SQL schema
 │   ├── entity_extraction/
 │   ├── relation_extraction/
 │   ├── entity_resolution/
@@ -141,6 +141,7 @@ aion-memory-system/
 │   ├── embedding_manager.py
 │   ├── graph_models.py
 │   └── open_router_client.py
+├── tests/                  # pytest suite: in-memory store, plus Postgres when available
 └── dev/                    # Demo / inspection tooling (not required for library use)
     ├── cli.py
     ├── mock_agent.py
@@ -190,7 +191,7 @@ Edit `.env`:
 docker compose up -d
 ```
 
-On first run, `main.py` applies the schema from `src/aion_memory/facts_store/schema.sql` (`FactsStore.create_schema()`).
+On first run, `main.py` applies the schema from `src/aion_memory/facts_store/schema.sql` (`PostgresFactsStore.create_schema()`).
 
 ### 4. Run the interactive demo
 
@@ -199,6 +200,14 @@ uv run python main.py
 ```
 
 stderr prints the path to the session log file, e.g. `dev/data/logs/<session-uuid>.jsonl`.
+
+### 5. Run the tests (optional)
+
+```bash
+uv run pytest
+```
+
+The store and pipeline tests run on an in-memory store. When `DATABASE_URL` points to a reachable Postgres with pgvector, they also run on Postgres, in a throwaway schema that is dropped afterwards. Without a database the Postgres variants are skipped.
 
 ---
 
@@ -249,7 +258,7 @@ Opens/writes `dev/data/graph.html` (requires DB running and facts for that user)
 |--------|---------|
 | `add(messages, user_id, session_id)` | Run full extraction pipeline; return entities, new facts, invalidations |
 | `retrieve(query, user_id, limit)` | BM25-ranked facts from graph retrieval |
-| `get(fact_id)` | Stored fact plus originating `add_log` messages |
+| `get(fact_id, user_id)` | Stored fact plus originating `add_log` messages |
 
 `update` and `delete` are not implemented yet.
 
@@ -292,7 +301,7 @@ Invalidated facts use **`valid_to`** / **`world_valid_to`** rather than hard del
 | Area | Start here |
 |------|------------|
 | Orchestration | `src/aion_memory/memory_system.py`, `main.py` |
-| Storage | `src/aion_memory/facts_store/facts_store.py`, `schema.sql` |
+| Storage | `src/aion_memory/facts_store/facts_store.py` (interface), `postgres_facts_store.py`, `schema.sql` |
 | Extraction | `src/aion_memory/entity_extraction/`, `src/aion_memory/relation_extraction/` |
 | Deduplication / time | `src/aion_memory/entity_resolution/`, `src/aion_memory/conflict_resolution/` |
 | Retrieval | `src/aion_memory/graph_retriever.py` |

@@ -25,7 +25,7 @@ These shape the public surface. Changing them after other code depends on the li
   - **Not decided:** numbered, idempotent migrations tracked in a version table inside the library's own schema, so the schema can evolve safely.
   - *Why:* first use stays a single step, and hosts that care about their database permissions keep control.
 - [ ] **Interfaces for storage and model clients.**
-  - **Decided (storage):** the facts store sits behind an internal interface that the components depend on. Postgres is the only shipped backend. The interface is private: hosts implement nothing, and it is not exported.
+  - **Decided (storage), done:** the facts store sits behind an internal interface (`FactsStore`) that the components depend on. Postgres (`PostgresFactsStore`) is the only shipped backend. The interface is private: hosts implement nothing, and it is not exported. Setup (`create_schema`) is not part of the interface.
   - **Open (model clients):** `create_memory_system` currently hard-wires `OpenRouterClient` for extraction and embeddings. Whether and how hosts can use other providers is not decided.
   - *Why:* the internal interface keeps the components testable without a database, and it makes a second backend possible later without touching hosts.
 
@@ -47,6 +47,7 @@ These shape the public surface. Changing them after other code depends on the li
 - [ ] **Logging etiquette.** Use `logging.getLogger(__name__)` and never configure handlers.
   - *Why:* the host decides where logs go.
 - [ ] **Tests against real Postgres.** Run storage tests against the `pgvector/pgvector` image (testcontainers locally, a service container in CI), ideally across more than one Postgres version.
+  - Started: the store and pipeline tests also run on the database in `DATABASE_URL`, in a throwaway schema, and skip without one. Still open: testcontainers or a CI service container, and more than one Postgres version.
   - *Why:* pgvector queries and transactions are where bugs hide, and mocks do not catch them.
 - [ ] **Document the requirements.** README states the Postgres version, the pgvector requirement, and the privileges needed for setup. A plain `postgres` image does not work.
   - *Why:* this is the first thing a new host runs into.
@@ -57,7 +58,8 @@ These shape the public surface. Changing them after other code depends on the li
 - [ ] **Small public API.** Export only what hosts need from `__init__.py` with `__all__`; keep everything else private. The internal store interface and the Postgres store stay out of the exports.
 - [ ] **Typing and versioning.** Ship `py.typed`, follow semantic versioning, and keep a changelog.
 - [ ] **Loose dependency bounds.** Use wide ranges for library dependencies (e.g. `psycopg>=3.1,<4`) rather than pinning; the lockfile is for development only.
-- [ ] **In-memory store implementation.** **Decided:** an in-memory implementation of the internal store interface, used for fast tests only and not offered to hosts. Run the same contract tests against it and the Postgres store.
+- [x] **In-memory store implementation.** **Decided:** an in-memory implementation of the internal store interface, used for fast tests only and not offered to hosts. Run the same contract tests against it and the Postgres store.
+  - Done: it lives in `tests/in_memory_facts_store.py`, and the store-level and pipeline tests run on both stores.
 
 ## Alternative to keep in mind
 
