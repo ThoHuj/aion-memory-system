@@ -19,11 +19,13 @@ These shape the public surface. Changing them after other code depends on the li
 - [ ] **Sync vs. async.** **Decided:** sync first. Async methods may be added alongside later. The pool question is covered by connection ownership.
   - Expected hosts for now are CLIs and headless agents. Running real sessions shows where latency matters (`add()` makes several model calls) before anything is optimized.
   - Adding async later does not break hosts, but it can mean reworking the internals. Revisit when a host needs it.
-- [ ] **Schema setup.** **Decided:** tables are created automatically on start by default, with a switch to turn that off for hosts that run setup in their own pipeline.
-  - Expose the raw setup SQL for those hosts.
-  - Check that the `vector` extension exists and fail with a clear message if not; `schema.sql` currently runs `CREATE EXTENSION`, which needs elevated privileges.
-  - **Not decided:** numbered, idempotent migrations tracked in a version table inside the library's own schema, so the schema can evolve safely.
+- [x] **Schema setup.** **Decided:** tables are created automatically on start by default, with a switch to turn that off for hosts that run setup in their own pipeline.
+  - Done: `create_memory_system(..., create_schema=False)` leaves the database untouched, and `schema_sql()` returns the setup SQL for hosts that run it themselves.
+  - Done: a missing pgvector, whether not installed or not allowed to be enabled, stops setup with a clear message. The check also runs, read-only, when setup is off. Other database errors are passed on unchanged.
+  - Note: enabling pgvector usually needs a superuser. It was not marked trusted in the build used for testing.
   - *Why:* first use stays a single step, and hosts that care about their database permissions keep control.
+- [ ] **Versioned migrations.** **Not decided:** numbered, idempotent migrations tracked in a version table inside the library's own schema, so the schema can evolve safely.
+  - *Why:* without them, a later change to a table cannot be applied to databases that already have the old one.
 - [ ] **Interfaces for storage and model clients.**
   - **Decided (storage), done:** the facts store sits behind an internal interface (`FactsStore`) that the components depend on. Postgres (`PostgresFactsStore`) is the only shipped backend. The interface is private: hosts implement nothing, and it is not exported. Setup (`create_schema`) is not part of the interface.
   - **Open (model clients):** `create_memory_system` currently hard-wires `OpenRouterClient` for extraction and embeddings. Whether and how hosts can use other providers is not decided.

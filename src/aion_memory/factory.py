@@ -15,14 +15,23 @@ def create_memory_system(
     extraction_model: str,
     embedding_model: str,
     database_url: str,
+    create_schema: bool = True,
 ) -> MemorySystem:
-    """Wire OpenRouter clients, Postgres, and memory components into a ready-to-use MemorySystem."""
+    """Wire OpenRouter clients, Postgres, and memory components into a ready-to-use MemorySystem.
+
+    The database must have pgvector. By default the pgvector extension and the tables are
+    created if missing. With create_schema=False the database is left untouched, so the
+    host sets it up itself with the SQL from schema_sql().
+    """
     extraction_client = OpenRouterClient(api_key=api_key, model=extraction_model)
     embedding_client = OpenRouterClient(api_key=api_key, model=embedding_model)
     embedding_manager = EmbeddingManager(embedding_client=embedding_client)
     facts_store = PostgresFactsStore.connect(database_url)
     try:
-        facts_store.create_schema()
+        if create_schema:
+            facts_store.create_schema()
+        else:
+            facts_store.require_pgvector()
     except BaseException:
         facts_store.close()
         raise

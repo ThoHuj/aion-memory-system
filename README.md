@@ -263,6 +263,8 @@ Opens/writes `dev/data/graph.html` (requires DB running and facts for that user)
 
 `create_memory_system(...)` takes the database URL and opens a small pool of connections of its own, so calls from several threads do not share one connection. Call `close()` when the host shuts down.
 
+The database must have pgvector. By default `create_memory_system` enables the extension and creates the tables if they are missing. Pass `create_schema=False` to leave the database untouched and run the SQL from `aion_memory.schema_sql()` through your own pipeline instead. If pgvector is not available, the library stops with an error that says what is needed.
+
 `update` and `delete` are not implemented yet.
 
 ---

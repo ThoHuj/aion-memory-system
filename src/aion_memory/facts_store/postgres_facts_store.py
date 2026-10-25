@@ -34,6 +34,18 @@ FACT_SELECT = (
 CONNECT_TIMEOUT_SECONDS = 10
 POOL_MAX_SIZE = 5
 
+PGVECTOR_MISSING_MESSAGE = (
+    "pgvector is not available in this database. Aion needs Postgres with the "
+    "pgvector extension installed (for example the pgvector/pgvector image) and "
+    "enabled in the database with CREATE EXTENSION vector, which needs a role "
+    "with enough privileges, often a superuser."
+)
+
+
+def schema_sql() -> str:
+    """Return the SQL that enables pgvector and creates the tables; safe to run repeatedly."""
+    return Path(__file__).with_name("schema.sql").read_text(encoding="utf-8")
+
 
 def _vector_literal(embedding: list[float]) -> str:
     """Format an embedding as a pgvector text literal."""
@@ -84,17 +96,12 @@ class PostgresFactsStore:
         self._pool = pool
 
     @classmethod
-    def connect(
-        cls,
-        database_url: str,
-        **connection_options: Any,
-    ) -> PostgresFactsStore:
+    def connect(cls, database_url: str) -> PostgresFactsStore:
         """Open a pool of connections to database_url; close() releases them."""
         options: dict[str, Any] = {
             "autocommit": True,
             "row_factory": dict_row,
             "connect_timeout": CONNECT_TIMEOUT_SECONDS,
-            **connection_options,
         }
         # Connect once up front so an unreachable database fails with its own error.
         psycopg.connect(database_url, **options).close()
@@ -117,10 +124,29 @@ class PostgresFactsStore:
         self._pool.close()
 
     def create_schema(self) -> None:
-        """Apply schema.sql idempotently."""
-        schema_sql = Path(__file__).with_name("schema.sql").read_text(encoding="utf-8")
-        with self._pool.connection() as connection:
-            connection.execute(schema_sql)  # type: ignore[arg-type]
+        """Apply schema.sql idempotently; raises RuntimeError if pgvector cannot be enabled."""
+        try:
+            with self._pool.connection() as connection:
+                connection.execute(schema_sql())  # type: ignore[arg-type]
+        except (
+            psycopg.errors.FeatureNotSupported,
+            psycopg.errors.InsufficientPrivilege,
+        ) as error:
+            if self._has_pgvector():
+                raise
+            raise RuntimeError(PGVECTOR_MISSING_MESSAGE) from error
+
+    def require_pgvector(self) -> None:
+        """Raise RuntimeError unless pgvector is enabled in the database; changes nothing."""
+        if not self._has_pgvector():
+            raise RuntimeError(PGVECTOR_MISSING_MESSAGE)
+
+    def _has_pgvector(self) -> bool:
+        """Return whether the vector extension is enabled in the database."""
+        row = self._fetch_one(
+            "SELECT 1 AS present FROM pg_extension WHERE extname = 'vector'", ()
+        )
+        return row is not None
 
     def _fetch_one(
         self, query: LiteralString, params: tuple[Any, ...]
