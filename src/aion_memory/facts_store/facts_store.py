@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Protocol
 
 from aion_memory.graph_models import (
     AddLogRecord,
+    GraphExport,
     GraphUpdate,
     StoredEntity,
     StoredFact,
@@ -68,6 +69,10 @@ class FactsStore(Protocol):
         limit: int = 10,
     ) -> list[dict[str, str]]:
         """Return up to limit most recent messages of the session of user_id, oldest first."""
+        ...
+
+    def export_graph(self, user_id: str) -> GraphExport:
+        """Return every entity of user_id, oldest first, and every fact of any validity, by valid_from."""
         ...
 
     def store_graph_update(

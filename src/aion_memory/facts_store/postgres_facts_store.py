@@ -12,6 +12,8 @@ from psycopg_pool import ConnectionPool
 
 from aion_memory.graph_models import (
     AddLogRecord,
+    GraphEntity,
+    GraphExport,
     GraphUpdate,
     StoredEntity,
     StoredFact,
@@ -271,6 +273,32 @@ class PostgresFactsStore:
         for row in reversed(rows):
             messages.extend(row["messages"])
         return messages[-limit:]
+
+    def export_graph(self, user_id: str) -> GraphExport:
+        """Return every entity of user_id, oldest first, and every fact of any validity, by valid_from."""
+        entity_rows = self._fetch_all(
+            "SELECT entity_id, name, entity_type, created_at FROM entities "
+            "WHERE user_id = %s ORDER BY created_at ASC, entity_id ASC",
+            (user_id,),
+        )
+        fact_rows = self._fetch_all(
+            FACT_SELECT + " WHERE facts.user_id = %s "
+            "ORDER BY facts.valid_from ASC, facts.fact_id ASC",
+            (user_id,),
+        )
+        return GraphExport(
+            user_id=user_id,
+            entities=[
+                GraphEntity(
+                    entity_id=row["entity_id"],
+                    name=row["name"],
+                    entity_type=row["entity_type"],
+                    created_at=row["created_at"].isoformat(),
+                )
+                for row in entity_rows
+            ],
+            facts=[_to_stored_fact(row) for row in fact_rows],
+        )
 
     def store_graph_update(
         self,

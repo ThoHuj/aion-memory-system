@@ -86,6 +86,23 @@ class StoredFact(BaseModel):
     add_id: str
 
 
+class GraphEntity(BaseModel):
+    """One entity of an exported graph, with the time it was created."""
+
+    entity_id: str
+    name: str
+    entity_type: str
+    created_at: str
+
+
+class GraphExport(BaseModel):
+    """The whole knowledge graph of one user, including facts that have ended."""
+
+    user_id: str
+    entities: list[GraphEntity] = Field(default_factory=list)
+    facts: list[StoredFact] = Field(default_factory=list)
+
+
 class AddLogRecord(BaseModel):
     """Log entry for the source messages of one add call."""
 

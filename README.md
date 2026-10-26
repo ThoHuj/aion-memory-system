@@ -130,7 +130,7 @@ aion-memory-system/
 ├── docker-compose.yml      # Postgres + pgvector on localhost:5433
 ├── .env.example            # Copy to .env (not committed)
 ├── src/aion_memory/        # Memory library (import as `aion_memory`)
-│   ├── memory_system.py    # Public facade: add, retrieve, get
+│   ├── memory_system.py    # Public facade: add, retrieve, get, export_graph
 │   ├── facts_store/        # Internal storage interface, Postgres store, SQL schema
 │   ├── entity_extraction/
 │   ├── relation_extraction/
@@ -140,6 +140,7 @@ aion-memory-system/
 │   ├── context_manager.py
 │   ├── embedding_manager.py
 │   ├── graph_models.py
+│   ├── graph_view.py       # render_graph_html: a graph export as an HTML page
 │   └── open_router_client.py
 ├── tests/                  # pytest suite: in-memory store, plus Postgres when available
 └── dev/                    # Demo / inspection tooling (not required for library use)
@@ -148,7 +149,7 @@ aion-memory-system/
     ├── agent_tools.py      # get_fact_sources for provenance
     ├── slash_commands.py   # /import traces
     ├── session_logger.py   # JSONL session logs
-    └── graph_view.py       # Export HTML knowledge graph visualization
+    └── graph_view.py       # Write a demo user's graph to HTML via the public API
 ```
 
 ---
@@ -243,10 +244,10 @@ These files support auditing retrieval and extraction without reading raw Postgr
 ### Visualize the knowledge graph (optional)
 
 ```bash
-python dev/graph_view.py --user-id user_01
+python dev/graph_view.py user_01
 ```
 
-Opens/writes `dev/data/graph.html` (requires DB running and facts for that user). Default mock agent `user_id` is **`user_01`** unless changed in `main.py` when constructing `MockAgent`.
+Writes `dev/data/graph.html` from the demo database configured in this repo's `.env` (requires the database running and facts for that user). Default mock agent `user_id` is **`user_01`** unless changed in `main.py` when constructing `MockAgent`. The script only wires up the public API; a host renders its own users' graphs with `export_graph` and `render_graph_html` (see below).
 
 ---
 
@@ -259,7 +260,10 @@ Opens/writes `dev/data/graph.html` (requires DB running and facts for that user)
 | `add(messages, user_id, session_id)` | Run full extraction pipeline; return entities, new facts, invalidations |
 | `retrieve(query, user_id, limit)` | BM25-ranked facts from graph retrieval |
 | `get(fact_id, user_id)` | Stored fact plus originating `add_log` messages |
+| `export_graph(user_id)` | The user's whole graph as a `GraphExport`: every entity and fact, ended facts included |
 | `close()` | Release the database connections; call once at shutdown |
+
+`render_graph_html(graph)` turns a `GraphExport` into a standalone HTML page that draws the graph. It touches no database or files; the host decides where the page goes. The page loads a pinned vis-network from unpkg, so viewing it needs internet access.
 
 `create_memory_system(...)` takes the database URL and opens a small pool of connections of its own, so calls from several threads do not share one connection. Call `close()` when the host shuts down.
 

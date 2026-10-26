@@ -11,6 +11,7 @@ from aion_memory.graph_models import (
     ExtractedEntity,
     ExtractedFact,
     FactInvalidation,
+    GraphExport,
     GraphUpdate,
     StoredFact,
 )
@@ -104,6 +105,10 @@ class MemorySystem:
         return RetrievalResult(
             retrieved_facts=[self.get(fact.fact_id, user_id) for fact in facts]
         )
+
+    def export_graph(self, user_id: str) -> GraphExport:
+        """Return the whole knowledge graph of user_id, including facts that have ended."""
+        return self._facts_store.export_graph(user_id)
 
     def close(self) -> None:
         """Release the database connections. The memory system cannot be used afterwards."""

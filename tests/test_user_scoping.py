@@ -80,3 +80,27 @@ def test_memory_system_get_is_scoped_to_the_user(facts_store: FactsStore) -> Non
     assert fact_data.origin.messages == [{"role": "user", "content": "I have a dog"}]
     with pytest.raises(KeyError):
         memory_system.get(fact_id, "bob")
+
+
+def test_memory_system_export_graph_is_scoped_to_the_user(
+    facts_store: FactsStore,
+) -> None:
+    """MemorySystem.export_graph returns only the graph of the user asked for."""
+    unused: Any = None
+    memory_system = MemorySystem(
+        facts_store=facts_store,
+        context_manager=unused,
+        entity_extractor=unused,
+        relation_extractor=unused,
+        embedding_manager=unused,
+        entity_resolver=unused,
+        conflict_resolver=unused,
+        graph_retriever=unused,
+    )
+    add_fact(facts_store, "alice", SHARED_SESSION, "I have a dog")
+    add_fact(facts_store, "bob", SHARED_SESSION, "I have a cat")
+
+    graph = memory_system.export_graph("bob")
+
+    assert {found.name for found in graph.entities} == {"bob", "pet"}
+    assert [found.source_entity for found in graph.facts] == ["bob"]

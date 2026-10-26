@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING
 
 from aion_memory.graph_models import (
     AddLogRecord,
+    GraphEntity,
+    GraphExport,
     GraphUpdate,
     StoredEntity,
     StoredFact,
@@ -190,6 +192,30 @@ class InMemoryFactsStore:
         for row in reversed(rows):
             messages.extend(dict(message) for message in row.messages)
         return messages[-limit:]
+
+    def export_graph(self, user_id: str) -> GraphExport:
+        """Return every entity of user_id, oldest first, and every fact of any validity, by valid_from."""
+        entity_rows = sorted(
+            (row for row in self._entities.values() if row.user_id == user_id),
+            key=lambda row: (row.created_at, row.entity.entity_id),
+        )
+        fact_rows = sorted(
+            (row for row in self._facts.values() if row.user_id == user_id),
+            key=lambda row: (row.valid_from, row.fact_id),
+        )
+        return GraphExport(
+            user_id=user_id,
+            entities=[
+                GraphEntity(
+                    entity_id=row.entity.entity_id,
+                    name=row.entity.name,
+                    entity_type=row.entity.entity_type,
+                    created_at=row.created_at.isoformat(),
+                )
+                for row in entity_rows
+            ],
+            facts=[self._to_stored_fact(row) for row in fact_rows],
+        )
 
     def store_graph_update(
         self,

@@ -289,6 +289,48 @@ def test_recent_session_messages_are_the_latest_oldest_first(
     assert recent(10, session_id="unknown") == []
 
 
+def test_export_graph_returns_the_users_whole_graph_including_ended_facts(
+    facts_store: FactsStore,
+) -> None:
+    """Entities come oldest first, facts by valid_from, ended facts too, and nothing of another user."""
+    alice_id = str(uuid.uuid4())
+    owns = fact("alice", "owns", "rex")
+    store_update(
+        facts_store,
+        "alice",
+        [entity("alice", [0, 0, 1], alice_id), entity("rex", [1, 0, 0])],
+        [owns],
+        minutes=0,
+    )
+    store_update(
+        facts_store,
+        "alice",
+        [entity("alice", [0, 0, 1], alice_id, is_new=False), entity("tom", [0, 1, 0])],
+        [fact("alice", "owns", "tom")],
+        minutes=5,
+        invalidations=[FactInvalidation(fact_id=owns.fact_id, world_valid_to=None)],
+    )
+    store_update(
+        facts_store,
+        "bob",
+        [entity("bob", [0, 0, 1]), entity("cat", [1, 0, 0])],
+        [fact("bob", "owns", "cat")],
+    )
+
+    graph = facts_store.export_graph("alice")
+
+    assert graph.user_id == "alice"
+    assert [found.name for found in graph.entities][-1] == "tom"
+    assert {found.name for found in graph.entities} == {"alice", "rex", "tom"}
+    assert datetime.fromisoformat(graph.entities[-1].created_at) == START + timedelta(
+        minutes=5
+    )
+    assert [found.destination_entity for found in graph.facts] == ["rex", "tom"]
+    assert graph.facts[0].valid_to is not None
+    assert graph.facts[1].valid_to is None
+    assert facts_store.export_graph("nobody").facts == []
+
+
 def test_unknown_ids_raise_key_error(facts_store: FactsStore) -> None:
     """Looking up a fact or add log record that does not exist raises KeyError."""
     with pytest.raises(KeyError):
