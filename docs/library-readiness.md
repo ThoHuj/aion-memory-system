@@ -16,7 +16,8 @@ These shape the public surface. Changing them after other code depends on the li
   - Done: `PostgresFactsStore.connect` opens a pool (1 to 5 connections), each operation borrows a connection, and `MemorySystem.close()` closes the pool. An unreachable database fails right away with psycopg's own error.
   - Possibly later: also accept a host-managed pool. Adding that does not break existing hosts. When it is added, close only what the library opened itself, and do not change connection-level settings (`autocommit`, `row_factory`) on a borrowed connection.
   - *Why:* a minimal integration is one string, and the pool option stays available without committing to it now.
-- [ ] **Sync vs. async.** **Decided:** sync first. Async methods may be added alongside later. The pool question is covered by connection ownership.
+- [x] **Sync vs. async.** **Decided:** sync first. Async methods may be added alongside later. The pool question is covered by connection ownership.
+  - Done: the whole API is synchronous.
   - Expected hosts for now are CLIs and headless agents. Running real sessions shows where latency matters (`add()` makes several model calls) before anything is optimized.
   - Adding async later does not break hosts, but it can mean reworking the internals. Revisit when a host needs it.
 - [x] **Schema setup.** **Decided:** tables are created automatically on start by default, with a switch to turn that off for hosts that run setup in their own pipeline.
@@ -42,11 +43,13 @@ These shape the public surface. Changing them after other code depends on the li
 - [ ] **Removing a user's data.** **Not designed:** the library keeps its own copy of the messages it is given (decided), so a host that must erase a user needs a way to remove that user's `add_log` rows, entities and facts. `delete` is currently only a commented-out stub in `memory_system.py`.
   - *Why:* erasing a user has to cover the library's copy as well as the host's history.
 - [ ] **Vector index.** `entities.embedding` is declared as `VECTOR` without a dimension, so pgvector cannot build an index on it and every similarity search scans the user's entities. Fine at small scale; revisit if it becomes slow.
-- [ ] **Configuration is explicit.** The package reads no environment variables and loads no `.env`; configuration comes through arguments or a typed config object. Env handling belongs to the host; nothing in this repo reads the environment.
+- [x] **Configuration is explicit.** The package reads no environment variables and loads no `.env`; configuration comes through arguments or a typed config object. Env handling belongs to the host.
+  - Done: nothing in the repo reads the environment; `create_memory_system` takes every setting as an argument.
   - *Why:* hidden environment reads make a library hard to embed and hard to test.
 - [ ] **Own exception hierarchy.** Raise library-specific exceptions rather than leaking raw `psycopg` or HTTP errors.
   - *Why:* hosts need stable errors to catch without depending on the library's internals.
 - [ ] **Logging etiquette.** Use `logging.getLogger(__name__)` and never configure handlers.
+  - Status: the library has no logging and no `print` yet, so it configures nothing. The rule applies once logging is added.
   - *Why:* the host decides where logs go.
 - [ ] **Tests against real Postgres.** Run storage tests against the `pgvector/pgvector` image (testcontainers locally, a service container in CI), ideally across more than one Postgres version.
   - Done locally: the test run starts a throwaway pgvector container with testcontainers, and the store and pipeline tests run on it as well as on the in-memory store. Without Docker they skip. The repo no longer has a compose file or `.env`.
@@ -61,9 +64,10 @@ These shape the public surface. Changing them after other code depends on the li
 ## 3. Packaging and polish
 
 - [x] **Small public API.** Export only what hosts need from `__init__.py` with `__all__`; keep everything else private. The internal store interface and the Postgres store stay out of the exports.
-  - Done: the package exports `create_memory_system`, `MemorySystem`, its result types and `schema_sql`. A test pins the list.
+  - Done: the package exports `create_memory_system`, `MemorySystem`, its result types, `GraphExport`, `render_graph_html` and `schema_sql`. A test pins the list.
 - [ ] **Typing and versioning.** Ship `py.typed`, follow semantic versioning, and keep a changelog.
 - [ ] **Loose dependency bounds.** Use wide ranges for library dependencies (e.g. `psycopg>=3.1,<4`) rather than pinning; the lockfile is for development only.
+  - Status: the runtime dependencies have no bounds at all yet, not even minimum versions.
 - [x] **In-memory store implementation.** **Decided:** an in-memory implementation of the internal store interface, used for fast tests only and not offered to hosts. Run the same contract tests against it and the Postgres store.
   - Done: it lives in `tests/in_memory_facts_store.py`, and the store-level and pipeline tests run on both stores.
 
