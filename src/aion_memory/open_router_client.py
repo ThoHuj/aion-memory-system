@@ -83,23 +83,6 @@ class OpenRouterClient:
 
         return embeddings
 
-    def complete(self, messages: list[dict[str, str]]) -> str:
-        """Send a message history and return the model response text."""
-        response_body = self._chat_completion({"messages": messages})
-        return response_body["choices"][0]["message"]["content"]
-
-    def complete_with_tools(
-        self,
-        messages: list[dict[str, object]],
-        tools: list[dict[str, object]],
-    ) -> dict[str, object]:
-        """Send messages with tool definitions and return the raw assistant message.
-
-        The returned message contains `tool_calls` when the model requests tools.
-        """
-        response_body = self._chat_completion({"messages": messages, "tools": tools})
-        return response_body["choices"][0]["message"]
-
     def complete_structured(
         self,
         messages: list[dict[str, str]],

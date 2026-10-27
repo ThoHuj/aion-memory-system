@@ -42,7 +42,7 @@ These shape the public surface. Changing them after other code depends on the li
 - [ ] **Removing a user's data.** **Not designed:** the library keeps its own copy of the messages it is given (decided), so a host that must erase a user needs a way to remove that user's `add_log` rows, entities and facts. `delete` is currently only a commented-out stub in `memory_system.py`.
   - *Why:* erasing a user has to cover the library's copy as well as the host's history.
 - [ ] **Vector index.** `entities.embedding` is declared as `VECTOR` without a dimension, so pgvector cannot build an index on it and every similarity search scans the user's entities. Fine at small scale; revisit if it becomes slow.
-- [ ] **Configuration is explicit.** The package reads no environment variables and loads no `.env`; configuration comes through arguments or a typed config object. Env handling stays in `main.py` and `dev/`.
+- [ ] **Configuration is explicit.** The package reads no environment variables and loads no `.env`; configuration comes through arguments or a typed config object. Env handling belongs to the host; in this repo only the tests load `.env`.
   - *Why:* hidden environment reads make a library hard to embed and hard to test.
 - [ ] **Own exception hierarchy.** Raise library-specific exceptions rather than leaking raw `psycopg` or HTTP errors.
   - *Why:* hosts need stable errors to catch without depending on the library's internals.
@@ -54,7 +54,8 @@ These shape the public surface. Changing them after other code depends on the li
 - [x] **Document the requirements.** README states the Postgres version, the pgvector requirement, and the privileges needed for setup. A plain `postgres` image does not work.
   - Done: the "Database requirements" section in the README. The privilege claims are pinned by tests. Only PostgreSQL 16 and 17 were tried; other versions are open (see the real-Postgres tests item).
   - *Why:* this is the first thing a new host runs into.
-- [ ] **Move demo-only dependencies out of runtime.** `python-dotenv` is only needed by `main.py`; make it a dev dependency.
+- [x] **No demo code in the library repo.** The mock agent, its CLI and the other `dev/` tools were removed; `aion-agent-system` is the reference host.
+  - Done: `python-dotenv` is a dev dependency only, used by the tests, and the chat methods only the mock agent used are gone from the OpenRouter client.
 
 ## 3. Packaging and polish
 
