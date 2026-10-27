@@ -1,30 +1,30 @@
-import os
 import uuid
 from collections.abc import Iterator
 
 import psycopg
 import pytest
-from dotenv import load_dotenv
+from docker.errors import DockerException
 from psycopg import sql
 from psycopg.conninfo import make_conninfo
+from testcontainers.community.postgres import PostgresContainer
 
 from aion_memory.facts_store import FactsStore, PostgresFactsStore
 from tests.in_memory_facts_store import InMemoryFactsStore
 
-load_dotenv()
+POSTGRES_IMAGE = "pgvector/pgvector:0.8.7-pg17"
 
 
-@pytest.fixture
-def database_url() -> str:
-    """The configured database URL; the test is skipped when it is not set or not reachable."""
-    url = os.environ.get("DATABASE_URL")
-    if not url:
-        pytest.skip("DATABASE_URL is not set")
+@pytest.fixture(scope="session")
+def database_url() -> Iterator[str]:
+    """A throwaway Postgres with pgvector in Docker for the whole test run; skipped without Docker."""
     try:
-        psycopg.connect(url, connect_timeout=3).close()
-    except psycopg.OperationalError:
-        pytest.skip("The database is not reachable")
-    return url
+        container = PostgresContainer(POSTGRES_IMAGE, driver=None).start()
+    except DockerException as error:
+        pytest.skip(f"Docker is not available: {error}")
+    try:
+        yield container.get_connection_url()
+    finally:
+        container.stop()
 
 
 @pytest.fixture

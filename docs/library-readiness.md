@@ -42,20 +42,21 @@ These shape the public surface. Changing them after other code depends on the li
 - [ ] **Removing a user's data.** **Not designed:** the library keeps its own copy of the messages it is given (decided), so a host that must erase a user needs a way to remove that user's `add_log` rows, entities and facts. `delete` is currently only a commented-out stub in `memory_system.py`.
   - *Why:* erasing a user has to cover the library's copy as well as the host's history.
 - [ ] **Vector index.** `entities.embedding` is declared as `VECTOR` without a dimension, so pgvector cannot build an index on it and every similarity search scans the user's entities. Fine at small scale; revisit if it becomes slow.
-- [ ] **Configuration is explicit.** The package reads no environment variables and loads no `.env`; configuration comes through arguments or a typed config object. Env handling belongs to the host; in this repo only the tests load `.env`.
+- [ ] **Configuration is explicit.** The package reads no environment variables and loads no `.env`; configuration comes through arguments or a typed config object. Env handling belongs to the host; nothing in this repo reads the environment.
   - *Why:* hidden environment reads make a library hard to embed and hard to test.
 - [ ] **Own exception hierarchy.** Raise library-specific exceptions rather than leaking raw `psycopg` or HTTP errors.
   - *Why:* hosts need stable errors to catch without depending on the library's internals.
 - [ ] **Logging etiquette.** Use `logging.getLogger(__name__)` and never configure handlers.
   - *Why:* the host decides where logs go.
 - [ ] **Tests against real Postgres.** Run storage tests against the `pgvector/pgvector` image (testcontainers locally, a service container in CI), ideally across more than one Postgres version.
-  - Started: the store and pipeline tests also run on the database in `DATABASE_URL`, in a throwaway schema, and skip without one. Still open: testcontainers or a CI service container, and more than one Postgres version.
+  - Done locally: the test run starts a throwaway pgvector container with testcontainers, and the store and pipeline tests run on it as well as on the in-memory store. Without Docker they skip. The repo no longer has a compose file or `.env`.
+  - Still open: running them in CI, and more than one Postgres version.
   - *Why:* pgvector queries and transactions are where bugs hide, and mocks do not catch them.
 - [x] **Document the requirements.** README states the Postgres version, the pgvector requirement, and the privileges needed for setup. A plain `postgres` image does not work.
   - Done: the "Database requirements" section in the README. The privilege claims are pinned by tests. Only PostgreSQL 16 and 17 were tried; other versions are open (see the real-Postgres tests item).
   - *Why:* this is the first thing a new host runs into.
 - [x] **No demo code in the library repo.** The mock agent, its CLI and the other `dev/` tools were removed; `aion-agent-system` is the reference host.
-  - Done: `python-dotenv` is a dev dependency only, used by the tests, and the chat methods only the mock agent used are gone from the OpenRouter client.
+  - Done: `python-dotenv` is no longer a dependency, and the chat methods only the mock agent used are gone from the OpenRouter client.
 
 ## 3. Packaging and polish
 

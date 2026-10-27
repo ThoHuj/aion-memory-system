@@ -84,7 +84,7 @@ Everything a host needs is exported from `aion_memory`. Other modules are intern
 
 ## Database requirements
 
-- **PostgreSQL with pgvector.** A plain `postgres` image does not work. The library is developed against PostgreSQL 17 (the `pgvector/pgvector:pg17` image in `docker-compose.yml`), and the tests also pass on PostgreSQL 16. Other versions are untested.
+- **PostgreSQL with pgvector.** A plain `postgres` image does not work. The tests run against PostgreSQL 17 (the `pgvector/pgvector:0.8.7-pg17` image), and they have also passed on PostgreSQL 16. Other versions are untested.
 - **Setup.** By default `create_memory_system` enables the extension and creates the tables if they are missing. Pass `create_schema=False` to leave the database untouched and run the SQL from `schema_sql()` through your own pipeline instead. If pgvector is not available, the library stops with an error that says what is needed.
 - **Where the tables go.** `add_log`, `entities` and `facts` are created in the connection's default schema. They are not prefixed or namespaced yet, so avoid a database where those names are taken.
 - **Privileges for setup, once.**
@@ -203,8 +203,6 @@ Invalidated facts are closed with **`valid_to`** / **`world_valid_to`** rather t
 ```
 aion-memory-system/
 ├── pyproject.toml          # Package metadata and dependencies (uv)
-├── docker-compose.yml      # Postgres + pgvector on localhost:5433, for development and tests
-├── .env.example            # Copy to .env for the tests (not committed)
 ├── src/aion_memory/        # The library (import as `aion_memory`)
 │   ├── __init__.py         # The public API
 │   ├── factory.py          # create_memory_system
@@ -234,17 +232,9 @@ uv sync
 uv run pytest
 ```
 
-The store and pipeline tests run on an in-memory store and use scripted stand-ins for the models, so they need no API key. When `DATABASE_URL` points to a reachable Postgres with pgvector, they also run on Postgres, in a throwaway schema that is dropped afterwards. Without a database the Postgres variants are skipped.
+The tests use scripted stand-ins for the models, so they need no API key or configuration. The store and pipeline tests run on an in-memory store and on Postgres.
 
-To run them against Postgres locally:
-
-```bash
-cp .env.example .env    # set POSTGRES_PASSWORD and the matching DATABASE_URL
-docker compose up -d
-uv run pytest
-```
-
-`.env` is gitignored. Do not commit passwords.
+For the Postgres tests, the test run starts a throwaway `pgvector/pgvector` container with [testcontainers](https://testcontainers.com/) and removes it at the end, so they only need Docker running. The repo has no database of its own. Without Docker, the Postgres tests are skipped.
 
 ---
 
